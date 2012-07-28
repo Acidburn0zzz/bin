@@ -1,0 +1,92 @@
+#!/bin/bash
+
+test_path="/mnt/data/bench" # location of files on physical disk
+ramdisk="/scratch/bench" 		# where to do the test - select a ramdisk to min hdd usage
+source="linux-3.5" 					# name of the dir containing the preconfigured linux source
+limit="28" 									# number of times to run
+MAKEFLAGS="8" 							# number of make flags
+
+normal() {
+	cd "$ramdisk/$source"
+	x=0
+	while [ "$x" -lt "$limit" ]; do
+		x=$(( $x + 1 ))
+		make clean &>/dev/null
+		RUNDATE=$(date "+%F %T")
+		start=$(date +%s.%N)
+		make -j$MAKEFLAGS bzImage &>/dev/null
+		end=$(date +%s.%N)
+		diff=$(echo "scale=6; $end - $start" | bc)
+		simpdiff=$(echo "scale=2; $end - $start" | bc)
+		runsleft=$(echo "scale=2; $limit-$x"| bc)
+		secleft=$(echo "scale=2; $runsleft*$diff"|bc)
+		minleft=$(echo "scale=2; $runsleft*$diff/60"|bc)
+		eta=$(date -d "($date) $secleft sec" +%r)
+		echo "Run $x/$limit took $simpdiff seconds. ETA: $eta or about $minleft min from now."
+		echo "$HOSTNAME,$MAKEFLAGS,$NAME,$diff,$x,$RUNDATE" >> $test_path/make.txt
+	done
+}
+
+cron() {
+	cd "$ramdisk/$source"
+	x=0
+	while [ "$x" -lt "$limit" ]; do
+		x=$(( $x + 1 ))
+		make clean &>/dev/null
+		RUNDATE=$(date "+%F %T")
+		start=$(date +%s.%N)
+		nice -19 make -j$MAKEFLAGS bzImage modules &>/dev/null
+		end=$(date +%s.%N)
+		diff=$(echo "scale=6; $end - $start" | bc)
+		echo "$HOSTNAME,$MAKEFLAGS,$NAME,$diff,$x,$RUNDATE" >> $test_path/make.txt
+	done
+}
+
+linpack() {
+	cd "$ramdisk/$source"
+	x=0
+	while [ "$x" -lt "$limit" ]; do
+		x=$(( $x + 1 ))
+		make clean &>/dev/null
+		RUNDATE=$(date "+%F %T")
+		start=$(date +%s.%N)
+		nice -19 make -j$MAKEFLAGS bzImage modules &>/dev/null
+		end=$(date +%s.%N)
+		diff=$(echo "scale=6; $end - $start" | bc)
+		echo "$HOSTNAME,$MAKEFLAGS,$NAME,$diff,$x,$RUNDATE" >> $test_path/make.txt
+	done
+}
+
+[[ -z $(which bc) ]] && echo "Install bc to allow calculations" && exit
+[[ ! -d $ramdisk ]] && mkdir -p $ramdisk
+[[ ! -f $test_path/make.txt ]] && echo "hostname,makeflags,kernel,time(sec),run #,run date" > $test_path/make.txt && echo "STRING,STRING,STRING,REAL,INT,DATE" >> $test_path/make.txt
+
+case "$1" in
+	cron)
+		# called by cron job so supress all output
+		# runs for about 1/2 h on this hardware
+		limit="3"
+		name="cron"
+		[[ ! -d $ramdisk/$source ]] && tar xf $test_path/$source.tar -C $ramdisk
+		cron
+		;;
+	linpack)
+		# called by cron job so supress all output
+		# runs niced to 19 for at least 2 h
+		# use as CPU filler for linpack stress
+		limit="24"
+		name="linpack"
+		[[ ! -d $ramdisk/$source ]] && tar xf $test_path/$source.tar -C $ramdisk
+		linpack
+		;;
+	*)
+		# normal running situation so use defaults defined above
+		echo -n "Name of this kernel: "
+		read -e NAME
+		if [ -z "$NAME" ]; then
+			NAME=$(uname -r)
+		fi
+		[[ ! -d $ramdisk/$source ]] && tar xf $test_path/$source.tar -C $ramdisk
+		normal
+		;;
+esac
