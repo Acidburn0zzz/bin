@@ -42,6 +42,21 @@ cron() {
 	done
 }
 
+mprime() {
+	cd "$ramdisk/$source"
+	x=0
+	while [ "$x" -lt "$limit" ]; do
+		x=$(( $x + 1 ))
+		make clean &>/dev/null
+		RUNDATE=$(date "+%F %T")
+		start=$(date +%s.%N)
+		make -j$MAKEFLAGS bzImage modules &>/dev/null
+		end=$(date +%s.%N)
+		diff=$(echo "scale=6; $end - $start" | bc)
+		echo "$HOSTNAME,$MAKEFLAGS,$NAME,$diff,$x,$RUNDATE" >> $test_path/make.txt
+	done
+}
+
 linpack() {
 	cd "$ramdisk/$source"
 	x=0
@@ -69,6 +84,15 @@ case "$1" in
 		name="cron"
 		[[ ! -d $ramdisk/$source ]] && tar xf $test_path/$source.tar -C $ramdisk
 		cron
+		;;
+	mprime)
+		# called by cron job so supress all output
+		# runs for at least 2 h
+		# use as CPU filler for mprime stress
+		limit="24"
+		name="mprime"
+		[[ ! -d $ramdisk/$source ]] && tar xf $test_path/$source.tar -C $ramdisk
+		mprime
 		;;
 	linpack)
 		# called by cron job so supress all output
