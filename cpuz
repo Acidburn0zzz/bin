@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# To enable multiple log entries, run script via `watch cpuz`
-# default is 2 sec
-#
 # Specific to my board with my use of fans
 # P8Z77-V Pro
 
