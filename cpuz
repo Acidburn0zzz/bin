@@ -35,9 +35,12 @@ run() {
 	per5=$(echo "scale=2; $pwm5/2.55" | bc)
 
 	dts=$(date +"%m-%d-%y %r")
-	[[ ! -f $logfile ]] && echo "dts,vcc,temp,core0,core1,core2,core3,120mm_rpm,120mm_pwm,140mm_rpm,140mm_pwm,comment" > $logfile
 
-	echo "$dts,$vcc,$phys,$c0,$c1,$c2,$c3,$fan4,$pwm4,$fan5,$pwm5,$comment" >> $logfile
+	if [[ "$LOGGING" = "Y" ]]; then	
+		[[ ! -f $logfile ]] && echo "dts,vcc,temp,core0,core1,core2,core3,120mm_rpm,120mm_pwm,140mm_rpm,140mm_pwm,comment" > $logfile
+
+		echo "$dts,$vcc,$phys,$c0,$c1,$c2,$c3,$fan4,$pwm4,$fan5,$pwm5,$comment" >> $logfile
+	fi
 
 	if [ -n "$output" ]; then
 		echo "Vcore : $vcc"
@@ -60,16 +63,23 @@ case "$1" in
 			sleep "$wait"s
 		done
 		;;
+	l)
+		export output="not null"
+		LOGGING="Y"
+		export -f run
+		/usr/bin/watch run
+		;;
 	v)
 		export output="not null"
 		export -f run
 		/usr/bin/watch run
 		;;
 	*)
-		echo "usage $0 {s|v}"
+		echo "usage $0 {s|v|l}"
 		echo
 		echo "s) silent mode/logfile only"
-		echo "v) verbose mode/logfile + output"
+		echo "l) verbose mode/logfile + output"
+		echo "v) verbose mode/output only"
 		exit 0
 		;;
 esac
