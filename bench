@@ -74,7 +74,7 @@ linpack() {
 
 [[ -z $(which bc) ]] && echo "Install bc to allow calculations" && exit
 [[ ! -d $ramdisk ]] && mkdir -p $ramdisk
-[[ ! -f $test_path/make.txt ]] && echo "hostname,makeflags,kernel,time(sec),run #,run date" > $test_path/make.txt && echo "STRING,STRING,STRING,REAL,INT,DATE" >> $test_path/make.txt
+[[ ! -f $test_path/make.txt ]] && echo "hostname,makeflags,kernel,time(sec),run #,run date" > $test_path/make.txt
 
 case "$1" in
 	cron)
