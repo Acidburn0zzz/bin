@@ -42,7 +42,7 @@ run() {
 		echo "$dts,$vcc,$phys,$c0,$c1,$c2,$c3,$fan4,$pwm4,$fan5,$pwm5,$comment" >> $logfile
 	fi
 
-	if [ -n "$output" ]; then
+	if [[ -n "$output" ]]; then
 		echo "Vcore : $vcc"
 		echo "back  : $fan1 ($pwm1/255) = $per1 %"
 		echo "top   : $fan3 ($pwm3/255) = $per3 %"
@@ -53,9 +53,9 @@ run() {
 
 case "$1" in
 	s)
+		export LOGGING="Y"
 		limit=86400                 # number of times to run
 		wait=2                      # delay in sec before taking a new reading
-		echo running in silent mode...
 		x=0
 		while [ "$x" -lt "$limit" ]; do
 			x=$(( $x + 1 ))
@@ -65,7 +65,7 @@ case "$1" in
 		;;
 	l)
 		export output="not null"
-		LOGGING="Y"
+		export LOGGING="Y"
 		export -f run
 		/usr/bin/watch run
 		;;
