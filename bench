@@ -2,7 +2,7 @@
 
 test_path="/mnt/data/bench" # location of files on physical disk
 ramdisk="/scratch/bench" 		# where to do the test - select a ramdisk to min hdd usage
-source="linux-3.5" 					# name of the dir containing the preconfigured linux source
+source="linux-3.6.1" 					# name of the dir containing the preconfigured linux source
 limit="28" 									# number of times to run
 MAKEFLAGS="8" 							# number of make flags
 
@@ -110,6 +110,8 @@ case "$1" in
 		if [ -z "$NAME" ]; then
 			NAME=$(uname -r)
 		fi
+		XSRUNNING=$(pidof xscreensaver)
+		[[ -n "$XSRUNNING" ]] && kill "$XSRUNNING"
 		[[ ! -d $ramdisk/$source ]] && tar xf $test_path/$source.tar -C $ramdisk
 		normal
 		;;
