@@ -2,7 +2,7 @@
 
 test_path="/mnt/data/bench" # location of files on physical disk
 ramdisk="/scratch/bench" 		# where to do the test - select a ramdisk to min hdd usage
-source="linux-3.6.1" 					# name of the dir containing the preconfigured linux source
+source="linux-3.6.2" 					# name of the dir containing the preconfigured linux source
 limit="28" 									# number of times to run
 MAKEFLAGS="8" 							# number of make flags
 
@@ -105,11 +105,11 @@ case "$1" in
 		;;
 	*)
 		# normal running situation so use defaults defined above
-		echo -n "Name of this kernel: "
-		read -e NAME
-		if [ -z "$NAME" ]; then
+		#echo -n "Name of this kernel: "
+		#read -e NAME
+		#if [ -z "$NAME" ]; then
 			NAME=$(uname -r)
-		fi
+		#fi
 		XSRUNNING=$(pidof xscreensaver)
 		[[ -n "$XSRUNNING" ]] && kill "$XSRUNNING"
 		[[ ! -d $ramdisk/$source ]] && tar xf $test_path/$source.tar -C $ramdisk
