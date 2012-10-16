@@ -1,12 +1,20 @@
 #!/bin/bash
 
 test_path="/mnt/data/bench" # location of files on physical disk
-ramdisk="/scratch/bench" 		# where to do the test - select a ramdisk to min hdd usage
-source="linux-3.6.2" 					# name of the dir containing the preconfigured linux source
-limit="28" 									# number of times to run
-MAKEFLAGS="9" 							# number of make flags
+ramdisk="/scratch/bench" # where to do the test - select a ramdisk to min hdd usage
+source="linux-3.6.2" # name of the dir containing the preconfigured linux source
 
-normal() {
+limit="19" # number of times to run
+PHYSICALCORES="4"	# number of physical cores NOT counting hyperthreads ones
+MAKEFLAGS="9"	# number of make flags
+NAME=$(uname -r)
+
+#####
+
+do_make() {
+	BENCH=make
+	echo "Running Make..."
+	[[ ! -d $ramdisk/$source ]] ; tar xf $test_path/$source.tar -C $ramdisk
 	cd "$ramdisk/$source"
 	x=0
 	while [ "$x" -lt "$limit" ]; do
@@ -23,96 +31,105 @@ normal() {
 		minleft=$(echo "scale=2; $runsleft*$diff/60"|bc)
 		eta=$(date -d "($date) $secleft sec" +%r)
 		echo "Run $x/$limit took $simpdiff seconds. ETA: $eta or about $minleft min from now."
-		echo "$HOSTNAME,$MAKEFLAGS,$NAME,$diff,$x,$RUNDATE" >> $test_path/make.txt
+		echo "$x,$RUNDATE,$HOSTNAME,$MAKEFLAGS,$NAME,$diff,$BENCH" >> $test_path/results.txt
 	done
+	cd $ramdisk && rm -rf $ramdisk/$source # cleanup
 }
 
-cron() {
-	cd "$ramdisk/$source"
+do_video() {
+	BENCH=video
+	echo "Running video..."
+	rsync -ax $test_path/2m-720p.mpg $ramdisk
+	cd $ramdisk
 	x=0
 	while [ "$x" -lt "$limit" ]; do
 		x=$(( $x + 1 ))
-		make clean &>/dev/null
 		RUNDATE=$(date "+%F %T")
 		start=$(date +%s.%N)
-		nice -19 make -j$MAKEFLAGS bzImage modules &>/dev/null
+		#360p video for iphones
+		ffmpeg -i 2m-720p.mpg -vcodec libx264 -vprofile baseline -preset slow -b:v 250k -maxrate 250k -bufsize 500k -vf scale=-1:360 -threads 0 -acodec copy out.mp4
 		end=$(date +%s.%N)
 		diff=$(echo "scale=6; $end - $start" | bc)
-		echo "$HOSTNAME,$MAKEFLAGS,$NAME,$diff,$x,$RUNDATE" >> $test_path/make.txt
+		simpdiff=$(echo "scale=2; $end - $start" | bc)
+		runsleft=$(echo "scale=2; $limit-$x"| bc)
+		secleft=$(echo "scale=2; $runsleft*$diff"|bc)
+		minleft=$(echo "scale=2; $runsleft*$diff/60"|bc)
+		eta=$(date -d "($date) $secleft sec" +%r)
+		echo "Run $x/$limit took $simpdiff seconds. ETA: $eta or about $minleft min from now."
+		echo "$x,$RUNDATE,$HOSTNAME,$PHYSICALCORES,$NAME,$diff,$BENCH" >> "$test_path"/results.txt
+		rm -f out.mp4
 	done
+	rm -f $ramdisk/2m-720p.mpg # cleanup
 }
 
-mprime() {
-	cd "$ramdisk/$source"
+do_pics() {
+	BENCH=pics
+	echo "Running pics..."
+	rsync -ax $test_path/photos/ $ramdisk/photos/
+	cd "$ramdisk/photos"
 	x=0
 	while [ "$x" -lt "$limit" ]; do
 		x=$(( $x + 1 ))
-		make clean &>/dev/null
 		RUNDATE=$(date "+%F %T")
 		start=$(date +%s.%N)
-		make -j$MAKEFLAGS bzImage modules &>/dev/null
+		cat list.txt | parallel --max-proc "$PHYSICALCORES" $test_path/resize.sh {}
 		end=$(date +%s.%N)
 		diff=$(echo "scale=6; $end - $start" | bc)
-		echo "$HOSTNAME,$MAKEFLAGS,$NAME,$diff,$x,$RUNDATE" >> $test_path/make.txt
+		simpdiff=$(echo "scale=2; $end - $start" | bc)
+		runsleft=$(echo "scale=2; $limit-$x"| bc)
+		secleft=$(echo "scale=2; $runsleft*$diff"|bc)
+		minleft=$(echo "scale=2; $runsleft*$diff/60"|bc)
+		eta=$(date -d "($date) $secleft sec" +%r)
+		echo "Run $x/$limit took $simpdiff seconds. ETA: $eta or about $minleft min from now."
+		echo "$x,$RUNDATE,$HOSTNAME,$PHYSICALCORES,$NAME,$diff,$BENCH" >> $test_path/results.txt
+		rm -f *.JPG
 	done
+	rm -rf $ramdisk/photos # clean up
 }
 
-linpack() {
-	cd "$ramdisk/$source"
+do_compress() {
+	BENCH=compress	
+	echo "Running compress..."
+	[[ ! -f $ramdisk/$source.tar ]] ; cp $test_path/$source.tar $ramdisk
+	cd "$ramdisk"
 	x=0
 	while [ "$x" -lt "$limit" ]; do
 		x=$(( $x + 1 ))
-		make clean &>/dev/null
 		RUNDATE=$(date "+%F %T")
 		start=$(date +%s.%N)
-		nice -19 make -j$MAKEFLAGS bzImage modules &>/dev/null
+		lrzip $source.tar
 		end=$(date +%s.%N)
 		diff=$(echo "scale=6; $end - $start" | bc)
-		echo "$HOSTNAME,$MAKEFLAGS,$NAME,$diff,$x,$RUNDATE" >> $test_path/make.txt
+		simpdiff=$(echo "scale=2; $end - $start" | bc)
+		runsleft=$(echo "scale=2; $limit-$x"| bc)
+		secleft=$(echo "scale=2; $runsleft*$diff"|bc)
+		minleft=$(echo "scale=2; $runsleft*$diff/60"|bc)
+		eta=$(date -d "($date) $secleft sec" +%r)
+		echo "Run $x/$limit took $simpdiff seconds. ETA: $eta or about $minleft min from now."
+		echo "$x,$RUNDATE,$HOSTNAME,$PHYSICALCORES,$NAME,$diff,$BENCH" >> $test_path/results.txt
+		rm -f $ramdisk/$source.tar.lrz
 	done
+	rm -f $ramdisk/$source.tar # cleanup
 }
 
-[[ -z $(which bc) ]] && echo "Install bc to allow calculations" && exit
+XSRUNNING=$(pidof xscreensaver)
+[[ -n "$XSRUNNING" ]] && kill "$XSRUNNING"
+
+[[ -z $(which bc) ]] && echo "Install bc to allow calculations." && exit 0
+[[ -z $(which ffmpeg) ]] && echo "Install ffmpeg to allow for video benchmark." && exit 0
+[[ -z $(which lrzip) ]] && echo "Install lrzip to allow for compression benchmark." && exit 0
+[[ -z $(which gcc) ]] && echo "Install base-devel group to allow for make benchmark." && exit 0
+[[ -z $(which convert) ]] && echo "Install imagemagick to allow for picture benchmark." && exit 0
+[[ -z $(which parallel) ]] && echo "Install parallel to allow for picture benchmark." && exit 0
+
 [[ ! -d $ramdisk ]] && mkdir -p $ramdisk
-[[ ! -f $test_path/make.txt ]] && echo "hostname,makeflags,kernel,time(sec),run #,run date" > $test_path/make.txt
+[[ ! -f $test_path/results.txt ]] && echo "run #,run date,hostname,physical cores/threads,kernel,time(sec),benchmark" > $test_path/results.txt
 
 case "$1" in
-	cron)
-		# called by cron job so supress all output
-		# runs for about 1/2 h on this hardware
-		limit="3"
-		name="cron"
-		[[ ! -d $ramdisk/$source ]] && tar xf $test_path/$source.tar -C $ramdisk
-		cron
-		;;
-	mprime)
-		# called by cron job so supress all output
-		# runs for at least 2 h
-		# use as CPU filler for mprime stress
-		limit="24"
-		name="mprime"
-		[[ ! -d $ramdisk/$source ]] && tar xf $test_path/$source.tar -C $ramdisk
-		mprime
-		;;
-	linpack)
-		# called by cron job so supress all output
-		# runs niced to 19 for at least 2 h
-		# use as CPU filler for linpack stress
-		limit="24"
-		name="linpack"
-		[[ ! -d $ramdisk/$source ]] && tar xf $test_path/$source.tar -C $ramdisk
-		linpack
-		;;
-	*)
-		# normal running situation so use defaults defined above
-		#echo -n "Name of this kernel: "
-		#read -e NAME
-		#if [ -z "$NAME" ]; then
-			NAME=$(uname -r)
-		#fi
-		XSRUNNING=$(pidof xscreensaver)
-		[[ -n "$XSRUNNING" ]] && kill "$XSRUNNING"
-		[[ ! -d $ramdisk/$source ]] && tar xf $test_path/$source.tar -C $ramdisk
-		normal
-		;;
+	compress)	do_compress	;;
+	pics)			do_pics	;;
+	video)		do_video ;;
+	make)			do_make ;;
+	all)			do_pics ; do_compress ; do_make ; do_video ;;
+	*)				echo "Usage: $0 {pics|video|make|compress|all}"	;	exit 0 ;;
 esac
