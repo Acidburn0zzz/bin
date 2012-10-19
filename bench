@@ -4,9 +4,9 @@ test_path="/mnt/data/bench" # location of files on physical disk
 ramdisk="/scratch/bench" # where to do the test - select a ramdisk to min hdd usage
 source="linux-3.6.2" # name of the dir containing the preconfigured linux source
 
-limit="19" # number of times to run
+limit="19" # number of times to run echo benchmark
 PHYSICALCORES="4"	# number of physical cores NOT counting hyperthreads ones
-MAKEFLAGS="9"	# number of make flags
+MAKEFLAGS="9"	# number of make flags which should be one more than the physical+virtual cores
 NAME=$(uname -r)
 
 #####
@@ -62,31 +62,6 @@ do_video() {
 	rm -f $ramdisk/2m-720p.mpg # cleanup
 }
 
-do_pics() {
-	BENCH=pics
-	echo "Running pics..."
-	rsync -ax $test_path/photos/ $ramdisk/photos/
-	cd "$ramdisk/photos"
-	x=0
-	while [ "$x" -lt "$limit" ]; do
-		x=$(( $x + 1 ))
-		RUNDATE=$(date "+%F %T")
-		start=$(date +%s.%N)
-		cat list.txt | parallel --max-proc "$PHYSICALCORES" $test_path/resize.sh {}
-		end=$(date +%s.%N)
-		diff=$(echo "scale=6; $end - $start" | bc)
-		simpdiff=$(echo "scale=2; $end - $start" | bc)
-		runsleft=$(echo "scale=2; $limit-$x"| bc)
-		secleft=$(echo "scale=2; $runsleft*$diff"|bc)
-		minleft=$(echo "scale=2; $runsleft*$diff/60"|bc)
-		eta=$(date -d "($date) $secleft sec" +%r)
-		echo "Run $x/$limit took $simpdiff seconds. ETA: $eta or about $minleft min from now."
-		echo "$x,$RUNDATE,$HOSTNAME,$PHYSICALCORES,$NAME,$diff,$BENCH" >> $test_path/results.txt
-		rm -f *.JPG
-	done
-	rm -rf $ramdisk/photos # clean up
-}
-
 do_compress() {
 	BENCH=compress	
 	echo "Running compress..."
@@ -119,17 +94,14 @@ XSRUNNING=$(pidof xscreensaver)
 [[ -z $(which ffmpeg) ]] && echo "Install ffmpeg to allow for video benchmark." && exit 0
 [[ -z $(which lrzip) ]] && echo "Install lrzip to allow for compression benchmark." && exit 0
 [[ -z $(which gcc) ]] && echo "Install base-devel group to allow for make benchmark." && exit 0
-[[ -z $(which convert) ]] && echo "Install imagemagick to allow for picture benchmark." && exit 0
-[[ -z $(which parallel) ]] && echo "Install parallel to allow for picture benchmark." && exit 0
 
 [[ ! -d $ramdisk ]] && mkdir -p $ramdisk
 [[ ! -f $test_path/results.txt ]] && echo "run #,run date,hostname,physical cores/threads,kernel,time(sec),benchmark" > $test_path/results.txt
 
 case "$1" in
 	compress)	do_compress	;;
-	pics)			do_pics	;;
 	video)		do_video ;;
 	make)			do_make ;;
-	all)			do_pics ; do_compress ; do_make ; do_video ;;
+	all)			do_compress ; do_make ; do_video ;;
 	*)				echo "Usage: $0 {pics|video|make|compress|all}"	;	exit 0 ;;
 esac
