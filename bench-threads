@@ -1,0 +1,29 @@
+#!/bin/bash
+work=/scratch         # tmpfs
+repo=/mnt/data/bench  # where sources are found
+dryrun=y              # set to anything to include a warmup run that is not logged
+target=samba-3.6.10   # what to build, expects a preconfigured samba-3.6.10.tar
+
+[[ ! -d /scratch/$target ]] && tar xf $repo/$target.tar -C $work
+[[ ! -f /scratch/make_stats.csv ]] && echo "run,target,makeflags,cpu%,time (sec)" > $work/make_stats.csv
+[[ -x /usr/bin/time ]] && echo "GNU time not found, run pacman -S time and try again." && exit 1
+
+cd $work/$target/source3
+
+if [[ -n "dryrun" ]]; then
+	# dryrun
+	make clean &>/dev/null
+	make -j8
+fi
+
+for MAKEFLAG in 4 8 9 12 16 20 24 28 32; do
+	for n in 1 2 3 4 5; do
+		# experiment
+		make clean &>/dev/null
+		/usr/bin/time -f "%e,%P" --output=/scratch/time.log make -j$MAKEFLAG
+		SEC=$(awk -F "," '{ print $1 }' /scratch/time.log)
+		CPU=$(awk -F "," '{ print $2 }' /scratch/time.log | sed 's/%//')
+		echo "$n,$target,$MAKEFLAG,$CPU,$SEC" >> $work/make_stats.csv
+		rm -f /scratch/time.log
+	done
+done
