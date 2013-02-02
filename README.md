@@ -1,4 +1,6 @@
 ##Scripts Used in Publications
+The following scripts have been referenced in publications and are freely available for public use.
+
 <table>
 <tr>
 <th>File</th><th>Description</th><th>Reference</th>
@@ -13,7 +15,9 @@
 <td>make bench</td><td>Script used to contrast different kernels on the basis of a the time to make bzImage of a predefined kernel source.</td><td>[-ck hacking](http://ck-hack.blogspot.com)</td>
 </tr>
 
-##Miscellaneous Scripts
+##Scripts Helpful to Arch Linux 
+The following scripts are useful for Arch Linux systems.
+
 <table>
 <tr>
 <th>File</th><th>Description</th>
