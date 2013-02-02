@@ -1,4 +1,4 @@
-## ~/bin
+## ~/bin/pub
 The following scripts have been referenced in publications and are freely available for public use.
 
 <table>
@@ -15,6 +15,7 @@ The following scripts have been referenced in publications and are freely availa
 <td>make bench</td><td>Script used to contrast different kernels on the basis of a the time to make bzImage of a predefined kernel source.</td><td>[-ck hacking](http://ck-hack.blogspot.com)</td>
 </tr>
 
+## ~/bin/archlinux
 The following scripts are useful for Arch Linux systems.
 
 <table>
