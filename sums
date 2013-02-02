@@ -1,0 +1,20 @@
+#!/bin/bash
+
+awk -v newsums="$(makepkg -g)" '
+BEGIN {
+  if (!newsums) exit 1
+}
+
+/^[[:blank:]]*(md|sha)[[:digit:]]+sums=/,/\)[[:blank:]]*$/ {
+  if (!i) print newsums; i++
+  next
+}
+
+1
+' PKGBUILD > /tmp/PKGBUILD.new
+
+[[ ! -s /tmp/PKGBUILD.new ]] && echo "Something is wrong, bailing." && exit 1
+
+cp /tmp/PKGBUILD.new PKGBUILD
+[[ -d src ]] && rm -rf src
+[[ -d /tmp/PKGBUILD.new ]] && rm -f /tmp/PKGBUILD.new

@@ -12,3 +12,15 @@
 <tr>
 <td>make bench</td><td>Script used to contrast different kernels on the basis of a the time to make bzImage of a predefined kernel source.</td><td>[-ck hacking](http://ck-hack.blogspot.com)</td>
 </tr>
+
+##Miscellaneous Scripts
+<table>
+<tr>
+<th>File</th><th>Description</th>
+</tr>
+<tr>
+<td>pacman-disowned</td><td>Scan root filesystem for system files and reports which (if any) are now owned by a specific package you have installed.</td>
+</tr>
+<tr>
+<td>sums</td><td>Run this in a directory containing a PKGBUILD to update the checksums. Useful on version bumps. Avoids the need to run `makepkg -g >>PKGBUILD` and then manually relocate the checksum array.</td>
+</tr>
