@@ -14,20 +14,11 @@ The following scripts have been referenced in publications and are freely availa
 <tr>
 <td>[make_bench](https://github.com/graysky2/bin/blob/master/make_bench)</td><td>Script used to contrast different kernels on the basis of a the time to make bzImage of a predefined kernel source.</td><td>[-ck hacking](http://ck-hack.blogspot.com)</td>
 </tr>
-</table>
 
-## ~/bin/archlinux
-The following scripts are useful for Arch Linux systems.
-
-<table>
-<tr>
-<th>File</th><th>Description</th>
 </tr>
 <tr>
-<td>[pacman-disowned](https://github.com/graysky2/bin/blob/master/pacman-disowned)</td><td>Scan root filesystem for system files and reports which (if any) are now owned by a specific package you have installed.</td>
+<td>[pacman-disowned](https://github.com/graysky2/bin/blob/master/pacman-disowned)</td><td>Scan root filesystem for system files and reports which (if any) are now owned by a specific package you have installed.</td><td></td>
 </tr>
 <tr>
-<td>[sums](https://github.com/graysky2/bin/blob/master/sums)</td><td>Run this in a directory containing a PKGBUILD to update the checksums. Useful on version bumps. Avoids the need to run `makepkg -g >>PKGBUILD` and then manually relocate the checksum array.</td>
+<td>[sums](https://github.com/graysky2/bin/blob/master/sums)</td><td>Run this in a directory containing a PKGBUILD to update the checksums. Useful on version bumps. Avoids the need to run `makepkg -g >>PKGBUILD` and then manually relocate the checksum array.</td><td></td>
 </tr>
-</table>
-
