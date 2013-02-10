@@ -1,0 +1,97 @@
+#!/bin/bash
+[[ ! -f $HOME/bin/pretty ]] && echo "missing $HOME/bin/pretty" && exit 1
+. $HOME/bin/pretty
+
+repo="/opt/share/www"
+temprepo="/scratch/router"
+des="/scratch"
+
+for i in x86_64 i686; do
+	[[ ! -f $HOME/bin/repo/makepkg.$i ]] && echo "Missing template makepkg.conf for $i" && exit 1
+done
+
+build64() {
+	makepkg -srcf --config $HOME/bin/repo/makepkg.x86_64
+}
+
+build32() {
+	schroot -p -- makepkg -srcf --config $HOME/bin/repo/makepkg.i686
+}
+
+deploy() {
+	rm -f $temprepo/$arch/$pkgname*.pkg.tar.xz 				# delete old pkg versions from repo
+	mv $start/$pkgname*.pkg.tar.xz $temprepo/$arch		# move in the new version to the repo
+
+	stat_busy "Reindexing $arch repo" 
+	repo-add $temprepo/$arch/router.db.tar.xz $temprepo/$arch/*.pkg.tar.xz &>/dev/null
+	repo-add -f $temprepo/$arch/router.files.tar.xz $temprepo/$arch/*.pkg.tar.xz &>/dev/null
+	stat_done
+
+	stat_busy "Rsyncing $arch back to router" 
+	rsync -aux --delete-after -e ssh $temprepo/$arch/ root@router:$repo/$arch/ &> /dev/null
+	stat_done
+}
+
+# here is the script
+start=$(pwd)
+[[ ! -d $temprepo ]] && mkdir -p $temprepo
+stat_busy "Rsyncing files from router" 
+rsync -aux -e ssh root@router:$repo/ $temprepo/ &>/dev/null
+stat_done
+
+if [[ -f PKGBUILD ]]; then
+	. PKGBUILD
+	for i in "$arch"; do
+		[[ $(pwd) != "$start" ]] && cd $start
+		case "$i" in
+			any)
+				# build in native 64-bit env since it is an any package and does not matter
+				msg "Building the any package..."
+				build64
+
+				# make sure to process both x86_64 and i686 repos for an any package
+				for x in x86_64 i686; do
+					rm -f $temprepo/$x/$pkgname*.pkg.tar.xz &> /dev/null	# cleanup old pkg versions from repo
+					cp $pkgname*.pkg.tar.xz $temprepo/$x	# copy in the new version
+
+					stat_busy "Reindexing $x repo" 
+					repo-add $temprepo/$x/router.db.tar.xz $temprepo/$x/*.pkg.tar.xz &>/dev/null
+					repo-add -f $temprepo/$x/router.files.tar.xz $temprepo/$x/*.pkg.tar.xz &>/dev/null
+					stat_done
+
+					stat_busy "Rsyncing $x back to router" 
+					rsync -axu --delete-after -e ssh $temprepo/$x/ root@router:$repo/$x/
+					stat_done
+				done
+				rm -f $pkgname*.pkg.tar.xz # remove the package
+				exit 0
+				;;
+			*)
+				arch="x86_64" && msg "Building the $arch package..."
+				build64
+				deploy # deplay function has its own stat_busy messages
+
+				arch="i686" && msg "Building the $arch package..."
+				build32
+				deploy # deplay function has its own stat_busy messages
+		esac
+	done
+else
+	echo "Remove unwanted packages from $temprepo/$arch"
+	read -r -p "Then hit any key to reindex and resync back." response
+	case "$response" in
+		*)
+			for x in x86_64 i686; do
+				stat_busy "Reindexing $x repo"
+				repo-add $temprepo/$x/router.db.tar.xz $temprepo/$x/*.pkg.tar.xz &>/dev/null
+				repo-add -f $temprepo/$x/router.files.tar.xz $temprepo/$x/*.pkg.tar.xz &>/dev/null
+				stat_done
+
+				stat_busy "Rsyncing $x back to router"
+				rsync -aux --delete-after -e ssh $temprepo/$x/ root@router:$repo/$x/ &> /dev/null
+				stat_done
+			done
+			exit 0
+			;;
+	esac
+fi

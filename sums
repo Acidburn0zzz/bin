@@ -17,4 +17,3 @@ BEGIN {
 
 cp /tmp/PKGBUILD.new PKGBUILD
 [[ -d src ]] && rm -rf src
-[[ -d /tmp/PKGBUILD.new ]] && rm -f /tmp/PKGBUILD.new
