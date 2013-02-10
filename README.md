@@ -22,3 +22,11 @@ The following scripts have been referenced in publications and are freely availa
 <tr>
 <td>[sums](https://github.com/graysky2/bin/blob/master/sums)</td><td>Run this in a directory containing a PKGBUILD to update the checksums. Useful on version bumps. Avoids the need to run `makepkg -g >>PKGBUILD` and then manually relocate the checksum array.</td><td></td>
 </tr>
+<tr>
+<td>[pretty](https://github.com/graysky2/bin/blob/master/pretty)</td><td>Just an excerpt from various Arch Linux rc.functions to make scripts prettier.</td><td></td>
+</tr>
+
+<tr>
+<td>[generic](https://github.com/graysky2/bin/blob/master/generic)</td><td>Wrapper script for makepkg that will build target PKG for both arches and sync to/from a local repo. Must have a configured and functional 32-bit chroot. See Arch Wiki page for 'schroot' for more info.</td><td></td>
+</tr>
+
