@@ -17,6 +17,9 @@ The following scripts have been referenced in publications and are freely availa
 
 </tr>
 <tr>
+<td></td><td></td><td></td>
+</tr>
+<tr>
 <td>[pacman-disowned](https://github.com/graysky2/bin/blob/master/pacman-disowned)</td><td>Scan root filesystem for system files and reports which (if any) are now owned by a specific package you have installed.</td><td></td>
 </tr>
 <tr>
