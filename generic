@@ -1,10 +1,14 @@
 #!/bin/bash
+# script will build package in target dir for both x86_64 and i686
+# and manage a local repo
+#
+# user must have 32-bit chroot setup and configured or else the i686 build will fail
 [[ ! -f $HOME/bin/pretty ]] && echo "missing $HOME/bin/pretty" && exit 1
 . $HOME/bin/pretty
 
-repo="/opt/share/www"
-temprepo="/scratch/router"
-des="/scratch"
+repo="/opt/share/www"	# dir on remote host holding the repo
+des="/scratch"	#
+temprepo="$des/router"	# build dir on local host
 
 for i in x86_64 i686; do
 	[[ ! -f $HOME/bin/repo/makepkg.$i ]] && echo "Missing template makepkg.conf for $i" && exit 1

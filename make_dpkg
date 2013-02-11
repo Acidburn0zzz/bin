@@ -1,0 +1,75 @@
+#!/bin/bash
+
+pkgname='profile-sync-daemon'
+pkgver=5.14     # manually define the pkgver
+
+### shouldn't need to edit anything below this line
+pkgdir=$(pwd)/pkg
+srcdir=$(pwd)/src
+
+# clean the build dirs
+[[ -d "$srcdir" ]] && rm -rf "$srcdir"
+[[ -d "$pkgdir" ]] && rm -rf "$pkgdir"
+
+mkdir "$srcdir" && cd "$srcdir"
+[[ ! -x /usr/bin/wget ]] && echo "Install wget and try again." && exit 0
+
+# get source
+wget https://github.com/graysky2/profile-sync-daemon/archive/v${pkgver}.tar.gz
+tar zxf v5.14.tar.gz
+
+cd "$srcdir/$pkgname-$pkgver"
+
+gzip -9 psd.manpage
+install -Dm 0644 psd.manpage.gz "$pkgdir/usr/share/man/man1/$pkgname.1.gz"
+ln -s "$pkgname.1.gz" "$pkgdir/usr/share/man/man1/psd.1.gz"
+
+# /usr/bin
+install -Dm755 $pkgname "$pkgdir/usr/bin/$pkgname"
+ln -s "$pkgname" "$pkgdir/usr/bin/psd"
+
+# now fixup the location of LOCKFILE in script for ubuntu
+sed -i '/DAEMON_FILE/ s,run,var\/run,' "$pkgdir/usr/bin/$pkgname"
+
+# /etc
+install -Dm644 psd.conf "$pkgdir/etc/psd.conf"
+install -Dm755 psd.debian.init.example "$pkgdir/etc/init.d/psd"
+install -Dm755 psd.cron.hourly "$pkgdir/etc/cron.hourly/psd-update"
+
+# make runlevel dirtree
+for initd_runlevel in 0 1 2 3 4 5 6; do
+	mkdir "$pkgdir/etc/rc$initd_runlevel.d"
+
+	case $initd_runlevel in 
+		0|6) linkname="K20psd" ;;
+	1|2|3|4|5) linkname="S20psd";;
+esac
+
+# this is broken need to fix
+#ln -s "$linkname" "$pkgdir/etc/rc$initd_runlevel.d/$linkname"
+done
+
+# make control stuff
+install -Dm644 CHANGELOG "$pkgdir/DEBIAN/changelog"
+
+cat > "$pkgdir/DEBIAN/control" << EOF
+Source: "$pkgname"
+Package: "$pkgname"
+Version: $pkgver
+Section: utils
+Priority: optional
+Architecture: all
+Essential: no
+Depends: rsync, gawk
+Recommends: cron
+Installed-Size: 72
+Maintainer: Jayman [wantsumthin@gmail.com]
+Description: Move browser cache to RAM
+Symlinks & syncs browser profile to RAM reducing disk I/O.
+Speeds up browsing and saves wear on disks.
+You must edit /etc/psd.conf and put your login id in the
+USERS="" field after installing the package.
+EOF
+
+cd "$pkgdir"
+dpkg-deb --build
