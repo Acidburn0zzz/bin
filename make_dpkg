@@ -1,5 +1,5 @@
 #!/bin/bash
-pkgver=5.15     # manually define the pkgver
+pkgver=5.16     # manually define the pkgver
 
 ### shouldn't need to edit anything below this line
 pkgname='profile-sync-daemon'
@@ -46,13 +46,24 @@ EOF
 # make the postinstall message for dpkg-deb
 cat > "$pkgdir/DEBIAN/postinst" << EOF
 #!/bin/sh
-	echo '--------------------------------------------------------------------------'
-	echo '  Define which users will make use of the sync in /etc/psd.conf'
-	echo '  Read the manpage before use or see the wiki page'
-	echo '  https://wiki.archlinux.org/index.php/Profile-sync-daemon'
-	echo
-	echo '  ALWAYS backup your profiles data before using utils like psd!'
-	echo '--------------------------------------------------------------------------'
+
+if [[ $(grep -c -i debian /etc/issue) = 1 ]]; then
+ # debian does not mount /tmp to tmpfs by default so use /dev/shm
+ sed -i 's/#VOLATILE="\/tmp"/VOLATILE="\/dev\/shm"/' /etc/psd.conf
+fi
+
+if [[ $(grep -c -i ubuntu /etc/issue) = 1 ]]; then
+ # ubuntu does not mount /tmp to tmpfs by default so use /run/shm
+ sed -i 's/#VOLATILE="\/tmp"/VOLATILE="\/run\/shm"/' /etc/psd.conf
+fi
+
+echo '--------------------------------------------------------------------------'
+echo '  Define which users will make use of the sync in /etc/psd.conf'
+echo '  Read the manpage before use or see the wiki page'
+echo '  https://wiki.archlinux.org/index.php/Profile-sync-daemon'
+echo
+echo '  ALWAYS backup your profiles data before using utils like psd!'
+echo '--------------------------------------------------------------------------'
 EOF
 chmod +x $pkgdir/DEBIAN/postinst
 
@@ -72,9 +83,6 @@ sed -i '/DAEMON_FILE=/ s,run,var\/run,' "$pkgdir/usr/bin/$pkgname"
 install -Dm644 psd.conf "$pkgdir/etc/psd.conf"
 install -Dm755 psd.debian.init.example "$pkgdir/etc/init.d/psd"
 install -Dm755 psd.cron.hourly "$pkgdir/etc/cron.hourly/psd-update"
-
-# ubuntu does not mount /tmp to tmpfs by default so use /run/shm
-sed -i 's/#VOLATILE="\/tmp"/VOLATILE="\/run\/shm"/' "$pkgdir/etc/psd.conf"
 
 # make runlevel dirtree
 for i in 0 1 2 3 4 5 6; do
