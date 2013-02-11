@@ -48,7 +48,7 @@ EOF
 cat > "$pkgdir/DEBIAN/prerm" << EOF
 #!/bin/sh
 set -e
-[[ -f /var/run/psd ]] && /etc/init.d/psd stop
+[ -f /var/run/psd ] && /etc/init.d/psd stop
 EOF
 chmod +x $pkgdir/DEBIAN/prerm
 
