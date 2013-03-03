@@ -1,33 +1,37 @@
 #!/bin/bash
-
 test_path="/mnt/data/bench" # location of files on physical disk
-ramdisk="/scratch/bench" # where to do the test - select a ramdisk to min hdd usage
-source="linux-3.7" # name of the dir containing the preconfigured linux source
+ramdisk="/scratch/bench" # where to do the test - select a ramdisk (tmpfs) to min hdd usage
+source="linux-3.8" # name of the tarball containing the preconfigured linux source in gz format
+format="gz"	# valid options are gz xz and null
 
-limit=10	  # number of times to run benchmark
-MAKEFLAGS=16	  # number of physical+virtual cores
+limit=10	# number of times to run benchmark knowing that the first run will be dropped (warm up)
+MAKEFLAGS=9	# number of physical+virtual cores on machine
 
 #####
 
 do_make() {
 	NAME=$(uname -r)
-	bfs_v=$(dmesg | grep BFS | cut -c34-39)
+	bfs_v=$(dmesg | grep 'BFS CPU' | cut -c34-39)
 	echo "Running Make..."
 	echo "Kernel: $NAME"
 	echo "Scheduler: $bfs_v"
 	echo
-	[[ ! -d $ramdisk/$source ]] ; tar xf $test_path/$source.tar -C $ramdisk
+	echo "Unpacking source..."
+	[[ ! -d "$ramdisk/$source" ]] ; tar zxf "$test_path/$source.tar.$format" -C "$ramdisk"
 	cd "$ramdisk/$source"
 	[[ -z "$bfs_v" ]] && bfs_v="cfs"
-	[[ ! -f $test_path/results.csv ]] && echo "run #,hostname,kernel,time(sec),scheduler,date" > $test_path/results.csv
+	[[ ! -f "$test_path/results.csv" ]] && echo "run #,hostname,kernel,time(sec),scheduler,date" > "$test_path/results.csv"
 	x=0
-	while [ "$x" -lt "$limit" ]; do
+	echo "Starting benchmark; status will update as benchmark progresses."
+	while [ $x -lt $limit ]; do
 		x=$(( $x + 1 ))
 		make clean &>/dev/null
 		RUNDATE=$(date "+%F %T")
+
 		start=$(date +%s.%N)
 		make -j$MAKEFLAGS bzImage &>/dev/null
 		end=$(date +%s.%N)
+
 		diff=$(echo "scale=6; $end - $start" | bc)
 		simpdiff=$(echo "scale=2; $end - $start" | bc)
 		runsleft=$(echo "scale=2; $limit-$x"| bc)
@@ -42,16 +46,15 @@ do_make() {
 			echo "$x,$HOSTNAME,$NAME,$diff,$bfs_v,$RUNDATE" >> $test_path/results.csv
 		fi
 	done
-	cd $ramdisk && rm -rf $ramdisk/$source # cleanup
+	cd "$ramdisk" && rm -rf "$ramdisk/$source" # cleanup
+	echo
+	echo "Benchmark done. Find results in $test_path/results.csv"
 }
 
 XSRUNNING=$(pidof xscreensaver)
 [[ -n "$XSRUNNING" ]] && kill "$XSRUNNING"
-
-[[ -z $(which bc) ]] && echo "Install bc to allow calculations." && exit 0
-[[ -z $(which ffmpeg) ]] && echo "Install ffmpeg to allow for video benchmark." && exit 0
-[[ -z $(which lrzip) ]] && echo "Install lrzip to allow for compression benchmark." && exit 0
 [[ -z $(which gcc) ]] && echo "Install base-devel group to allow for make benchmark." && exit 0
+[[ -z $(which bc) ]] && echo "Install bc to allow calculations." && exit 0
 [[ ! -d $ramdisk ]] && mkdir -p $ramdisk
 
 do_make
