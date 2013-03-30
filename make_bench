@@ -5,7 +5,7 @@ source="linux-3.8" # name of the tarball containing the preconfigured linux sour
 format="gz"	# valid options are gz xz and null
 
 limit=10	# number of times to run benchmark knowing that the first run will be dropped (warm up)
-MAKEFLAGS=9	# number of physical+virtual cores on machine
+MAKEFLAGS=8	# number of physical+virtual cores on machine
 
 #####
 
