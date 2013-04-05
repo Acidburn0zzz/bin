@@ -5,7 +5,7 @@ source="htop-1.0.2" # name of the tarball containing the preconfigured htop sour
 format="gz" # valid options are gz xz and null
 
 limit=10  # number of times to run benchmark knowing that the first run will be dropped (warm up)
-MAKEFLAGS=1 # make flags 
+MAKEFLAGS=2 # make flags 
 
 #####
 
