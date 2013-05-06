@@ -2,10 +2,10 @@
 test_path="/mnt/data/bench" # location of files on physical disk
 ramdisk="/tmp/bench" # where to do the test - select a ramdisk (tmpfs) to min hdd usage
 source="linux-3.8" # name of the tarball containing the preconfigured linux source in gz format
-samba="samba-3.6.12"
+samba="samba-3.6.12" # name of tarball containing the preconfigured samba source in gz format
 format="gz"	# valid options are gz xz and null
-MAKEFLAGS=9	# number of physical+virtual cores on machine
-limit=19		# number of times to run benchmark knowing that the first run will be dropped (warm up)
+MAKEFLAGS=9	# make flags for benchmark
+limit=10		# number of times to run benchmark knowing that the first run will be dropped (warm up)
 
 #####
 
@@ -52,7 +52,7 @@ do_samba() {
 	echo "Benchmark done. Find results in $test_path/results.csv"
 }
 
-do_make() {
+do_bzimage() {
 	bench=bzImage
 	NAME=$(uname -r)
 	bfs_v=$(dmesg | grep 'Con K' | cut -c34-39)
@@ -103,16 +103,16 @@ XSRUNNING=$(pidof xscreensaver)
 
 case "$1" in
 	all) 
-		do_samba ; do_make
+		do_samba ; do_bzimage
 		;;
-	m) 
-		do_make
+	b) 
+		do_bzimagee
 		;;
 	s) 
 		do_samba 
 		;;
 	*) 
-		echo "$0 {all|m|s}"
+		echo "$0 {all|b|s}"
 		exit 0
 		;;
 esac
