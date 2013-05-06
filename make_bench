@@ -5,14 +5,15 @@ source="linux-3.8" # name of the tarball containing the preconfigured linux sour
 samba="samba-3.6.12" # name of tarball containing the preconfigured samba source in gz format
 format="gz"	# valid options are gz xz and null
 MAKEFLAGS=9	# make flags for benchmark
-limit=10		# number of times to run benchmark knowing that the first run will be dropped (warm up)
+limit=19		# number of times to run benchmark knowing that the first run will be dropped (warm up)
 
 #####
+NAME=$(uname -r)
+bfs_v=$(dmesg | grep 'Con K' | awk '{ print $6 }') # this should capture the BFS version
+[[ -z "$bfs_v" ]] && bfs_v="cfs"
 
 do_samba() {
 	bench=samba
-	NAME=$(uname -r)
-	bfs_v=$(dmesg | grep 'Con K' | cut -c34-39)
 	echo "Running Samba..."
 	echo "Kernel: $NAME"
 	echo "Scheduler: $bfs_v"
@@ -54,8 +55,6 @@ do_samba() {
 
 do_bzimage() {
 	bench=bzImage
-	NAME=$(uname -r)
-	bfs_v=$(dmesg | grep 'Con K' | cut -c34-39)
 	echo "Running Make..."
 	echo "Kernel: $NAME"
 	echo "Scheduler: $bfs_v"
@@ -63,7 +62,6 @@ do_bzimage() {
 	echo "Unpacking source..."
 	[[ ! -d "$ramdisk/$source" ]] ; tar zxf "$test_path/$source.tar.$format" -C "$ramdisk"
 	cd "$ramdisk/$source"
-	[[ -z "$bfs_v" ]] && bfs_v="cfs"
 	[[ ! -f "$test_path/results.csv" ]] && echo "run #,hostname,kernel,benchmark,time(sec),scheduler,date" > "$test_path/results.csv"
 	x=0
 	echo "Starting benchmark; status will update as benchmark progresses."
@@ -102,7 +100,7 @@ XSRUNNING=$(pidof xscreensaver)
 [[ ! -d $ramdisk ]] && mkdir -p $ramdisk
 
 case "$1" in
-	all) 
+	a) 
 		do_samba ; do_bzimage
 		;;
 	b) 
@@ -112,7 +110,7 @@ case "$1" in
 		do_samba 
 		;;
 	*) 
-		echo "$0 {all|b|s}"
+		echo "$0 {a|b|s}"
 		exit 0
 		;;
 esac
