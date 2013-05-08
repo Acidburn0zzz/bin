@@ -104,7 +104,7 @@ case "$1" in
 		do_samba ; do_bzimage
 		;;
 	b) 
-		do_bzimagee
+		do_bzimage
 		;;
 	s) 
 		do_samba 
