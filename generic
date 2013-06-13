@@ -12,14 +12,15 @@ temprepo="$des/router"	# build dir on local host
 
 for i in x86_64 i686; do
 	[[ ! -f $HOME/bin/repo/makepkg.$i ]] && echo "Missing template makepkg.conf for $i" && exit 1
+	sed -e '/graysky/d' -e '/GPGKEY/d' ~/bin/repo/makepkg.$i > /tmp/makepkg.$i
 done
 
 build64() {
-	makepkg -srcf --config $HOME/bin/repo/makepkg.x86_64
+	makepkg -srcf --config /tmp/makepkg.x86_64
 }
 
 build32() {
-	schroot -p -- makepkg -srcf --config $HOME/bin/repo/makepkg.i686
+	schroot -p -- makepkg -srcf --config /tmp/makepkg.i686
 }
 
 deploy() {
@@ -42,6 +43,8 @@ start=$(pwd)
 stat_busy "Rsyncing files from router" 
 rsync -aux -e ssh root@router:$repo/ $temprepo/ &>/dev/null
 stat_done
+
+# build all arches
 
 if [[ -f PKGBUILD ]]; then
 	. PKGBUILD
@@ -73,11 +76,11 @@ if [[ -f PKGBUILD ]]; then
 			*)
 				arch="x86_64" && msg "Building the $arch package..."
 				build64
-				deploy # deplay function has its own stat_busy messages
+				deploy # deploy function has its own stat_busy messages
 
 				arch="i686" && msg "Building the $arch package..."
 				build32
-				deploy # deplay function has its own stat_busy messages
+				deploy # deploy function has its own stat_busy messages
 		esac
 	done
 else
