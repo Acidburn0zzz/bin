@@ -33,7 +33,7 @@ deploy() {
 	stat_done
 
 	stat_busy "Rsyncing $arch back to router" 
-	rsync -aux --delete-after -e ssh $temprepo/$arch/ root@router:$repo/$arch/ &> /dev/null
+	rsync -auxP --delete-after -e ssh $temprepo/$arch/ root@router:$repo/$arch/ 
 	stat_done
 }
 
@@ -71,6 +71,7 @@ if [[ -f PKGBUILD ]]; then
 					stat_done
 				done
 				rm -f $pkgname*.pkg.tar.xz # remove the package
+				#rm -rf $temprepo
 				exit 0
 				;;
 			*)
@@ -98,6 +99,7 @@ else
 				rsync -aux --delete-after -e ssh $temprepo/$x/ root@router:$repo/$x/ &> /dev/null
 				stat_done
 			done
+			#rm -rf $temprepo
 			exit 0
 			;;
 	esac
