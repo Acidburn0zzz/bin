@@ -1,0 +1,86 @@
+#!/bin/sh
+
+# This very trivial script will log the downstream/upstream power levels
+# as well as the respective SNR from your Arris TM822 and related modem
+# to a simple comma separated text file for plotting in other software.
+#
+# Use it to monitor powerlevels and SNR values over time to aid in trouble-
+# shooting connectivity with your ISP. The script is easily called from a
+# cronjob at some appropriate interval (hourly for example).
+#
+# Script by graysky
+# https://github.com/graysky2/bin/arris_signals
+
+# TEMP is the full path to the temp file wget will grab from your modem.
+TEMP=/tmp/snapshot.html
+
+# LOG is the full path to the log file you will keep.
+LOG=/tmp/mnt/router/optware/share/www/arris_log.txt
+
+###############       Do not edit below this line         ##################
+RUNDATE=$(date "+%F %T")
+wget -q http://192.168.100.1/cgi-bin/status_cgi -O $TEMP
+
+# downstream data
+DS1=$(grep '549.00' $TEMP | awk -F'<td>' '{ print $5 }' | sed 's| dBmV.*||')
+DS2=$(grep '579.00' $TEMP | awk -F'<td>' '{ print $14 }' | sed 's| dBmV.*||')
+DS3=$(grep '561.00' $TEMP | awk -F'<td>' '{ print $23 }' | sed 's| dBmV.*||')
+DS4=$(grep '567.00' $TEMP | awk -F'<td>' '{ print $32 }' | sed 's| dBmV.*||')
+DS5=$(grep '573.00' $TEMP | awk -F'<td>' '{ print $41 }' | sed 's| dBmV.*||')
+DS6=$(grep '555.00' $TEMP | awk -F'<td>' '{ print $50 }' | sed 's| dBmV.*||')
+DS7=$(grep '537.00' $TEMP | awk -F'<td>' '{ print $59 }' | sed 's| dBmV.*||')
+DS8=$(grep '543.00' $TEMP | awk -F'<td>' '{ print $68 }' | sed 's| dBmV.*||')
+SN1=$(grep '549.00' $TEMP | awk -F'<td>' '{ print $6 }' | sed 's| dB.*||')
+SN2=$(grep '579.00' $TEMP | awk -F'<td>' '{ print $15 }' | sed 's| dB.*||')
+SN3=$(grep '561.00' $TEMP | awk -F'<td>' '{ print $24 }' | sed 's| dB.*||')
+SN4=$(grep '567.00' $TEMP | awk -F'<td>' '{ print $33 }' | sed 's| dB.*||')
+SN5=$(grep '573.00' $TEMP | awk -F'<td>' '{ print $42 }' | sed 's| dB.*||')
+SN6=$(grep '555.00' $TEMP | awk -F'<td>' '{ print $51 }' | sed 's| dB.*||')
+SN7=$(grep '537.00' $TEMP | awk -F'<td>' '{ print $60 }' | sed 's| dB.*||')
+SN8=$(grep '543.00' $TEMP | awk -F'<td>' '{ print $69 }' | sed 's| dB.*||')
+
+# upstream data
+US1=$(grep '36.40' $TEMP | awk -F'<td>' '{ print $4 }' | sed 's| MHz.*||')
+US2=$(grep '29.50' $TEMP | awk -F'<td>' '{ print $11 }' | sed 's| MHz.*||')
+US3=$(grep '24.20' $TEMP | awk -F'<td>' '{ print $18 }' | sed 's| MHz.*||')
+USN1=$(grep '36.40' $TEMP | awk -F'<td>' '{ print $5 }' | sed 's| dBmV.*||')
+USN2=$(grep '29.50' $TEMP | awk -F'<td>' '{ print $12 }' | sed 's| dBmV.*||')
+USN3=$(grep '24.20' $TEMP | awk -F'<td>' '{ print $19 }' | sed 's| dBmV.*||')
+
+# force a 0 value when undefined due to poor connectivity
+[[ "$DS1" = "----</td>" ]] && DS1=0
+[[ "$DS2" = "----</td>" ]] && DS2=0
+[[ "$DS3" = "----</td>" ]] && DS3=0
+[[ "$DS4" = "----</td>" ]] && DS4=0
+[[ "$DS5" = "----</td>" ]] && DS5=0
+[[ "$DS6" = "----</td>" ]] && DS6=0
+[[ "$DS7" = "----</td>" ]] && DS7=0
+[[ "$DS8" = "----</td>" ]] && DS8=0
+[[ "$SN1" = "----</td>" ]] && SN1=0
+[[ "$SN2" = "----</td>" ]] && SN2=0
+[[ "$SN3" = "----</td>" ]] && SN3=0
+[[ "$SN4" = "----</td>" ]] && SN4=0
+[[ "$SN5" = "----</td>" ]] && SN5=0
+[[ "$SN6" = "----</td>" ]] && SN6=0
+[[ "$SN7" = "----</td>" ]] && SN7=0
+[[ "$SN8" = "----</td>" ]] && SN8=0
+[[ "$US1" = "----</td>" ]] && SN1=0
+[[ "$US2" = "----</td>" ]] && SN2=0
+[[ "$US3" = "----</td>" ]] && SN3=0
+[[ "$USN1" = "----</td>" ]] && USN1=0
+[[ "$USN2" = "----</td>" ]] && USN2=0
+[[ "$USN3" = "----</td>" ]] && USN3=0
+
+# make log file
+[[ ! -f $LOG ]] && echo "DTS,Stream,Freq (MHz),Power (dBmV),SNR" >>$LOG
+echo "$RUNDATE,Down,549.0 MHz,$DS1,$SN1" >> $LOG
+echo "$RUNDATE,Down,579.0 MHz,$DS2,$SN2" >> $LOG
+echo "$RUNDATE,Down,561.0 MHz,$DS3,$SN3" >> $LOG
+echo "$RUNDATE,Down,567.0 MHz,$DS4,$SN4" >> $LOG
+echo "$RUNDATE,Down,573.0 MHz,$DS5,$SN5" >> $LOG
+echo "$RUNDATE,Down,555.0 MHz,$DS6,$SN6" >> $LOG
+echo "$RUNDATE,Down,537.0 MHz,$DS7,$SN7" >> $LOG
+echo "$RUNDATE,Down,543.0 MHz,$DS8,$SN8" >> $LOG
+echo "$RUNDATE,Up,36.4 MHz,$US1,$USN1" >> $LOG
+echo "$RUNDATE,Up,29.5 MHz,$US2,$USN2" >> $LOG
+echo "$RUNDATE,Up,24.2 MHz,$US3,$USN3" >> $LOG
