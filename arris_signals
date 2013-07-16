@@ -9,7 +9,7 @@
 # cronjob at some appropriate interval (hourly for example).
 #
 # Script by graysky
-# https://github.com/graysky2/bin/arris_signals
+# https://github.com/graysky2/bin/blob/master/arris_signals
 
 # TEMP is the full path to the temp file wget will grab from your modem.
 TEMP=/tmp/snapshot.html
