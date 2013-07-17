@@ -33,6 +33,8 @@ LOGPATH=/tmp/mnt/router/optware/share/www
 LOG="$LOGPATH/arris.txt"
 ###############       Do not edit below this line         ##################
 
+# remove old dump file to avoid duplicate entries
+[[ -f "$LOG" ]] && rm -f "$TEMP"
 RUNDATE=$(date "+%F %T")
 
 wget -q -T 5 http://192.168.100.1/cgi-bin/status_cgi -O $TEMP || \
