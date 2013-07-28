@@ -20,8 +20,6 @@ The following scripts have been referenced in publications and are freely availa
 <td></td><td></td><td></td>
 </tr>
 <tr>
-<td>[arris_signals](https://github.com/graysky2/bin/blob/master/arris_signals)</td><td>Simple shell script that conencts to an Arris modem and logs the upstream/downstream SNRs and power levels to a csv.</td><td></td>
-<tr>
 <td>[generic](https://github.com/graysky2/bin/blob/master/generic)</td><td>Wrapper script for makepkg that will build target PKG for both arches and sync to/from a local repo. Must have a configured and functional 32-bit chroot. See Arch Wiki page for 'schroot' for more info.</td><td></td>
 </tr>
 <tr>
