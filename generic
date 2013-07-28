@@ -23,7 +23,8 @@ deploy() {
 	stat_done
 
 	stat_busy "Rsyncing $arch back to router" 
-	rsync -avx --password-file ~/bin/makepkg/.generic $temprepo/$arch/ easy::repo/$arch/ &>/dev/null
+	rsync -avxu --delete-after --password-file ~/bin/makepkg/.generic \
+		$temprepo/$arch/ easy::repo/$arch/ &>/dev/null
 	stat_done
 }
 
