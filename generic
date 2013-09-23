@@ -40,7 +40,8 @@ build32() {
 start=$(pwd)
 [[ ! -d $temprepo ]] && mkdir -p $temprepo
 stat_busy "Grabbing files from router"
-rsync -avx --password-file ~/bin/makepkg/.generic easy::repo/ $temprepo/ &>/dev/null
+rsync -avx --password-file ~/bin/makepkg/.generic \
+	easy::repo/ $temprepo/ &>/dev/null
 stat_done
 
 # build all arches
@@ -69,6 +70,7 @@ if [[ -f PKGBUILD ]]; then
 					stat_done
 				done
 				rm -f $pkgname*.pkg.tar.xz # remove the package
+				rm -rf "temprepo"
 				exit 0
 				;;
 			*)
@@ -78,7 +80,9 @@ if [[ -f PKGBUILD ]]; then
 
 				arch="i686" && msg "Building the $arch package..."
 				build32
-				deploy # deploy function has its own stat_busy messages
+				deploy # deploy function has its own stat_busy message
+				rm -rf "temprepo"
+
 		esac
 	done
 else
@@ -95,6 +99,7 @@ else
 				stat_busy "Rsyncing $x back to router"
 				rsync -axu --password-file ~/bin/makepkg/.generic $temprepo/$x/ easy::repo/$x/ $>/dev/null
 				stat_done
+				rm -rf "temprepo"
 			done
 			exit 0
 			;;
