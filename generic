@@ -33,15 +33,18 @@ build64() {
 }
 
 build32() {
-	schroot -p -- makepkg -srcf --config /tmp/makepkg.i686
+	[[ ! -f /run/arch32 ]] && sudo systemctl start arch32
+	sleep 1s
+	schroot -p -- makepkg -srcf --noconfirm --config /tmp/makepkg.i686
+	sleep 1s
+	[[ -f /run/arch32 ]] && sudo systemctl stop arch32
 }
 
 # here is the script
 start=$(pwd)
 [[ ! -d $temprepo ]] && mkdir -p $temprepo
 stat_busy "Grabbing files from router"
-rsync -avx --password-file ~/bin/makepkg/.generic \
-	easy::repo/ $temprepo/ &>/dev/null
+rsync -avx --password-file ~/bin/makepkg/.generic easy::repo/ $temprepo/ &>/dev/null
 stat_done
 
 # build all arches
@@ -57,7 +60,7 @@ if [[ -f PKGBUILD ]]; then
 				build64
 				# make sure to process both x86_64 and i686 repos for an any package
 				for x in x86_64 i686; do
-					rm -f $temprepo/$x/$pkgname*.pkg.tar.xz &> /dev/null	# cleanup old pkg versions from repo
+					rm -f $temprepo/$x/$pkgname*.pkg.tar.xz # cleanup old pkg versions from repo
 					cp $pkgname*.pkg.tar.xz $temprepo/$x	# copy in the new version
 
 					stat_busy "Reindexing $x repo" 
