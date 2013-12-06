@@ -69,7 +69,7 @@ if [[ -f PKGBUILD ]]; then
 					stat_done
 
 					stat_busy "Rsyncing $x back to router"
-					rsync -axu --password-file ~/bin/makepkg/.generic $temprepo/$x/ easy::repo/$x/ &>/dev/null
+					rsync -axu --delete-after --password-file ~/bin/makepkg/.generic $temprepo/$x/ easy::repo/$x/ &>/dev/null
 					stat_done
 				done
 				rm -f $pkgname*.pkg.tar.xz # remove the package
@@ -100,7 +100,7 @@ else
 				stat_done
 
 				stat_busy "Rsyncing $x back to router"
-				rsync -axu --password-file ~/bin/makepkg/.generic $temprepo/$x/ easy::repo/$x/ $>/dev/null
+				rsync -axu --delete-after --password-file ~/bin/makepkg/.generic $temprepo/$x/ easy::repo/$x/ $>/dev/null
 				stat_done
 				rm -rf "temprepo"
 			done
