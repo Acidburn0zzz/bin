@@ -32,6 +32,14 @@ build64() {
 	makepkg -srcf --config /tmp/makepkg.x86_64
 }
 
+chrootbuild64() {
+	sudo ccm s
+}
+
+chrootbuild32() {
+	sudo ccm32 s
+}
+
 build32() {
 	[[ ! -f /run/arch32 ]] && sudo systemctl start arch32
 	sleep 1s
@@ -62,7 +70,8 @@ if [[ -f PKGBUILD ]]; then
 			any)
 				# build in native 64-bit env since it is an any package and does not matter
 				msg "Building the any package..."
-				build64
+				#build64
+				chrootbuild64
 				# make sure to process both x86_64 and i686 repos for an any package
 				for x in x86_64 i686; do
 					rm -f $temprepo/$x/$pkgname*.pkg.tar.xz # cleanup old pkg versions from repo
@@ -83,11 +92,13 @@ if [[ -f PKGBUILD ]]; then
 				;;
 			*)
 				arch="x86_64" && msg "Building the $arch package..."
-				build64
+				#build64
+				chrootbuild64
 				deploy # deploy function has its own stat_busy messages
 
 				arch="i686" && msg "Building the $arch package..."
-				build32
+				#build32
+				chrootbuild32
 				deploy # deploy function has its own stat_busy message
 				rm -rf "temprepo"
 
