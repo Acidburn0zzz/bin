@@ -6,6 +6,9 @@ The following scripts have been referenced in publications and are freely availa
 <th>File</th><th>Description</th><th>Reference</th>
 </tr>
 <tr>
+<td>[mprime_and_burnP6_logger](https://github.com/graysky2/bin/blob/master/mprime_and_burnP6_logger)</td><td>Runs mprime and burnP6 for specific hardware.  You can easily modify to run with any hardware.</td><td>[Detailed study on AS5 break-in time; it only takes a few hours](http://www.silentpcreview.com/forums/viewtopic.php?f=8&t=68084)</td>
+</tr>
+<tr>
 <td>[bench](https://github.com/graysky2/bin/blob/master/bench)</td><td>Runs gcc, ffmpeg, and lrzip stressing and benchmarking.</td><td>[cpu schedulers compared](http://repo-ck.com/bench/cpu_schedulers_compared.pdf)</td>
 </tr>
 <tr>
