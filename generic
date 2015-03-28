@@ -33,11 +33,11 @@ build64() {
 }
 
 chrootbuild64() {
-	sudo ccm s
+	sudo ccm S
 }
 
 chrootbuild32() {
-	sudo ccm32 s
+	sudo ccm32 S
 }
 
 build32() {
