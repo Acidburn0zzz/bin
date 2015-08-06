@@ -1,29 +1,40 @@
 #!/bin/bash
-work=/scratch         # tmpfs
-repo=/mnt/data/bench  # where sources are found
-dryrun=y              # set to anything to include a warmup run that is not logged
-target=samba-3.6.10   # what to build, expects a preconfigured samba-3.6.10.tar
+work=/scratch
+repo=/mnt/data/bench
+dryrun=y
+target=linux-4.0.9
+threads=9
 
-[[ ! -d /scratch/$target ]] && tar xf $repo/$target.tar -C $work
-[[ ! -f /scratch/make_stats.csv ]] && echo "run,target,makeflags,cpu%,time (sec)" > $work/make_stats.csv
-[[ -x /usr/bin/time ]] && echo "GNU time not found, run pacman -S time and try again." && exit 1
+XSRUNNING=$(pidof xscreensaver)
+[[ -n "$XSRUNNING" ]] && kill "$XSRUNNING"
 
-cd $work/$target/source3
+[[ ! -d $work/$target ]] && tar xf $repo/$target.tar -C $work
+[[ ! -f $repo/make_stats.csv ]] && echo "run,target,makeflags,comment,time (sec)" > $repo/make_stats.csv
+cd $work/$target
 
 if [[ -n "dryrun" ]]; then
 	# dryrun
 	make clean &>/dev/null
-	make -j8
+	start=$(date +%s.%N)
+	echo 'dry run'
+	make -j$threads bzImage &>/dev/null
+	end=$(date +%s.%N)
+	diff=$(echo "scale=6; $end - $start" | bc)
+	echo "dry run took $diff seconds"
+	sudo sysctl --write vm.drop_caches=3 &>/dev/null
 fi
 
-for MAKEFLAG in 4 8 9 12 16 20 24 28 32; do
-	for n in 1 2 3 4 5; do
-		# experiment
+for MAKEFLAGS in 3 4 5 6; do
+	for n in 1 2 3; do
 		make clean &>/dev/null
-		/usr/bin/time -f "%e,%P" --output=/scratch/time.log make -j$MAKEFLAG
-		SEC=$(awk -F "," '{ print $1 }' /scratch/time.log)
-		CPU=$(awk -F "," '{ print $2 }' /scratch/time.log | sed 's/%//')
-		echo "$n,$target,$MAKEFLAG,$CPU,$SEC" >> $work/make_stats.csv
-		rm -f /scratch/time.log
+		RUNDATE=$(date "+%F %T")
+		start=$(date +%s.%N)
+		make -j$MAKEFLAGS bzImage &>/dev/null
+		end=$(date +%s.%N)
+		diff=$(echo "scale=6; $end - $start" | bc)
+		echo "run $n took $diff seconds using $MAKEFLAGS threads"
+		echo "$n,$target,$MAKEFLAGS,$CPU,$diff" >> $repo/make_stats.csv
+		sudo sysctl --write vm.drop_caches=3 &>/dev/null
 	done
 done
+
