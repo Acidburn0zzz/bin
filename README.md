@@ -12,6 +12,9 @@ The following scripts have been referenced in publications and are freely availa
 <td>[cpuz](https://github.com/graysky2/bin/blob/master/cpuz)</td><td>Script to harvest temp, voltage, and fan speed data.</td><td>[IvyBridge 3770K IHS Removal and Results](http://www.silentpcreview.com/IvyBridge_3770K_IHS_removal_and_results)</td>
 </tr>
 <tr>
+<td>[ciphertest.sh](https://github.com/graysky2/bin/blob/master/ciphertest.sh)</td><td>Script to preform a test of file transfer throughput using scp/rsync to determine which cipher is best for a particular pair of PCs.</td><td>[Speed-up rsync and scp xfers on a Lan - choice of cipher is key!](https://bbs.archlinux.org/viewtopic.php?id=136713)</td>
+</tr>
+<tr>
 <td>[make_bench](https://github.com/graysky2/bin/blob/master/make_bench)</td><td>Script used to contrast different kernels on the basis of a the time to make bzImage of a predefined kernel source.</td><td>[-ck hacking](http://ck-hack.blogspot.com)</td>
 </tr>
 <tr>
