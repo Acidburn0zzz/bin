@@ -1,12 +1,20 @@
 #!/bin/bash
 
-test_path="/mnt/data/bench" # location of files on physical disk
-ramdisk="/scratch/bench" # where to do the test - select a ramdisk to min hdd usage
-source="linux-4.0" # name of the dir containing the preconfigured linux source
+# location of files on physical disk
+test_path="/mnt/data/bench"
+# where to do the test - select a ramdisk to min hdd usage
+ramdisk="/scratch/bench"
+# name of the dir containing the preconfigured linux source
+source="linux-4.7"
+# name of video
+video="video.mp4"
 
-limit="10" # number of times to run echo benchmark
-PHYSICALCORES="4"	# number of physical cores NOT counting hyperthreads ones
-MAKEFLAGS="9"	# number of make flags which should be one more than the physical+virtual cores
+# number of times to run echo benchmark
+limit="10"
+# number of physical cores NOT counting hyperthreads ones
+PHYSICALCORES="4"
+# number of make flags which should be one more than the physical+virtual cores
+MAKEFLAGS="9"
 NAME=$(uname -r)
 
 #####
@@ -14,10 +22,11 @@ NAME=$(uname -r)
 do_make() {
 	BENCH=make
 	echo "Running Make..."
-	[[ ! -d $ramdisk/$source ]] ; tar xf $test_path/$source.tar -C $ramdisk
-	cd "$ramdisk/$source"
+	[[ ! -d $ramdisk/$source ]] &&
+		tar xf $test_path/$source.tar -C $ramdisk
+	cd "$ramdisk/$source" || exit
 	x=0
-	while [ "$x" -lt "$limit" ]; do
+	while [[ "$x" -lt "$limit" ]]; do
 		x=$(( $x + 1 ))
 		make clean &>/dev/null
 		RUNDATE=$(date "+%F %T")
@@ -33,21 +42,23 @@ do_make() {
 		echo "Run $x/$limit took $simpdiff seconds. ETA: $eta or about $minleft min from now."
 		echo "$x,$RUNDATE,$HOSTNAME,$MAKEFLAGS,$NAME,$diff,$BENCH" >> $test_path/results.txt
 	done
-	cd $ramdisk && rm -rf $ramdisk/$source # cleanup
+	# clean up
+	rm -rf "$ramdisk/$source"
 }
 
 do_video() {
 	BENCH=video
 	echo "Running video..."
-	rsync -ax $test_path/2m-720p.mpg $ramdisk
-	cd $ramdisk
+	rsync -ax $test_path/$video $ramdisk
+	cd $ramdisk || exit
 	x=0
-	while [ "$x" -lt "$limit" ]; do
+	while [[ "$x" -lt "$limit" ]]; do
 		x=$(( $x + 1 ))
 		RUNDATE=$(date "+%F %T")
 		start=$(date +%s.%N)
-		#360p video for iphones
-		ffmpeg -i 2m-720p.mpg -vcodec libx264 -vprofile baseline -preset slow -b:v 250k -maxrate 250k -bufsize 500k -vf scale=-1:360 -threads 0 -acodec copy out.mp4
+		# 360p video for iphones
+		ffmpeg -i "$video" -vcodec libx264 -vprofile baseline -preset slow -b:v \
+			250k -maxrate 250k -bufsize 500k -vf scale=-1:360 -threads 0 -acodec copy out.mp4
 		end=$(date +%s.%N)
 		diff=$(echo "scale=6; $end - $start" | bc)
 		simpdiff=$(echo "scale=2; $end - $start" | bc)
@@ -59,16 +70,17 @@ do_video() {
 		echo "$x,$RUNDATE,$HOSTNAME,$PHYSICALCORES,$NAME,$diff,$BENCH" >> "$test_path"/results.txt
 		rm -f out.mp4
 	done
-	rm -f $ramdisk/2m-720p.mpg # cleanup
+	# cleanup
+	rm -f "$ramdisk/$video"
 }
 
 do_compress() {
 	BENCH=compress	
 	echo "Running compress..."
-	[[ ! -f $ramdisk/$source.tar ]] ; cp $test_path/$source.tar $ramdisk
-	cd "$ramdisk"
+	[[ ! -f "$ramdisk/$source.tar" ]] && cp "$test_path/$source.tar" "$ramdisk"
+	cd "$ramdisk" || exit
 	x=0
-	while [ "$x" -lt "$limit" ]; do
+	while [[ "$x" -lt "$limit" ]]; do
 		x=$(( $x + 1 ))
 		RUNDATE=$(date "+%F %T")
 		start=$(date +%s.%N)
@@ -82,26 +94,27 @@ do_compress() {
 		eta=$(date -d "($date) $secleft sec" +%r)
 		echo "Run $x/$limit took $simpdiff seconds. ETA: $eta or about $minleft min from now."
 		echo "$x,$RUNDATE,$HOSTNAME,$PHYSICALCORES,$NAME,$diff,$BENCH" >> $test_path/results.txt
-		rm -f $ramdisk/$source.tar.lrz
+		rm -f "$ramdisk/$source.tar.lrz"
 	done
-	rm -f $ramdisk/$source.tar # cleanup
+	# cleanup
+	rm -f "$ramdisk/$source.tar"
 }
 
 XSRUNNING=$(pidof xscreensaver)
 [[ -n "$XSRUNNING" ]] && kill "$XSRUNNING"
-
 [[ -z $(which bc) ]] && echo "Install bc to allow calculations." && exit 0
 [[ -z $(which ffmpeg) ]] && echo "Install ffmpeg to allow for video benchmark." && exit 0
 [[ -z $(which lrzip) ]] && echo "Install lrzip to allow for compression benchmark." && exit 0
 [[ -z $(which gcc) ]] && echo "Install base-devel group to allow for make benchmark." && exit 0
-
-[[ ! -d $ramdisk ]] && mkdir -p $ramdisk
-[[ ! -f $test_path/results.txt ]] && echo "run #,run date,hostname,physical cores/threads,kernel,time(sec),benchmark" > $test_path/results.txt
+[[ ! -d "$ramdisk" ]] && mkdir -p "$ramdisk"
+[[ ! -f "$test_path"/results.txt ]] &&
+	echo "run #,run date,hostname,physical cores/threads,kernel,time(sec),benchmark" \
+	> "$test_path/results.txt"
 
 case "$1" in
-	compress)	do_compress	;;
+	compress)	do_compress ;;
 	video)		do_video ;;
 	make)			do_make ;;
 	all)			do_compress ; do_make ;;
-	*)				echo "Usage: $0 {pics|video|make|compress|all}"	;	exit 0 ;;
+	*)				echo "Usage: $0 {pics|video|make|compress|all}" ; exit 0 ;;
 esac
