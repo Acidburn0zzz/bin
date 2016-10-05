@@ -1,23 +1,36 @@
 #!/bin/bash
 
-# location of files on physical disk
+# location of files on physical disk where below files are stored
+# and where results will be written
 test_path="/mnt/data/bench"
-# where to do the test - select a ramdisk to min hdd usage
+
+# where to do the test - using tmpfs is HIGHLY recommended
 ramdisk="/scratch/bench"
+
 # name of the dir containing the preconfigured linux source
-source="linux-4.7"
-# name of video
-video="video.mp4"
+source="linux-4.8"
+
+# name of video for test encode
+# https://www.youtube.com/watch?v=o3oDpCb7VqI
+# can be downloaded with youtube-dl
+video="video.mkv"
 
 # number of times to run echo benchmark
 limit="10"
-# number of physical cores NOT counting hyperthreads ones
-PHYSICALCORES="4"
-# number of make flags which should be one more than the physical+virtual cores
-MAKEFLAGS="9"
-NAME=$(uname -r)
 
-#####
+# number of make flags which should be physical core + hyperthreaded core + 1
+MAKEFLAGS="17"
+
+calc() {
+	diff=$(echo "scale=6; $finish - $start" | bc)
+	simpdiff=$(echo "scale=2; $finish - $start" | bc)
+	runsleft=$(echo "scale=2; $limit-$x"| bc)
+	secleft=$(echo "scale=2; $runsleft*$diff"|bc)
+	minleft=$(echo "scale=2; $runsleft*$diff/60"|bc)
+	eta=$(date -d "($date) $secleft sec" +%r)
+	echo "Run $x/$limit took $simpdiff seconds. ETA: $eta or about $minleft min from now."
+	echo "$x,$RUNDATE,$HOSTNAME,$MAKEFLAGS,$(uname -r),$diff,$BENCH" >> $test_path/results.txt
+}
 
 do_make() {
 	BENCH=make
@@ -27,61 +40,45 @@ do_make() {
 	cd "$ramdisk/$source" || exit
 	x=0
 	while [[ "$x" -lt "$limit" ]]; do
-		x=$(( $x + 1 ))
+		x=$(( x + 1 ))
 		make clean &>/dev/null
 		RUNDATE=$(date "+%F %T")
 		start=$(date +%s.%N)
 		make -j$MAKEFLAGS bzImage &>/dev/null
-		end=$(date +%s.%N)
-		diff=$(echo "scale=6; $end - $start" | bc)
-		simpdiff=$(echo "scale=2; $end - $start" | bc)
-		runsleft=$(echo "scale=2; $limit-$x"| bc)
-		secleft=$(echo "scale=2; $runsleft*$diff"|bc)
-		minleft=$(echo "scale=2; $runsleft*$diff/60"|bc)
-		eta=$(date -d "($date) $secleft sec" +%r)
-		echo "Run $x/$limit took $simpdiff seconds. ETA: $eta or about $minleft min from now."
-		echo "$x,$RUNDATE,$HOSTNAME,$MAKEFLAGS,$NAME,$diff,$BENCH" >> $test_path/results.txt
+		finish=$(date +%s.%N)
+		calc
 	done
-	# clean up
 	rm -rf "$ramdisk/$source"
 }
 
 do_video() {
 	BENCH=video
 	echo "Running video..."
-	rsync -ax $test_path/$video $ramdisk
+	cp -a "$test_path/$video" "$ramdisk"
 	cd $ramdisk || exit
 	x=0
 	while [[ "$x" -lt "$limit" ]]; do
-		x=$(( $x + 1 ))
+		x=$(( x + 1 ))
 		RUNDATE=$(date "+%F %T")
 		start=$(date +%s.%N)
-		# 360p video for iphones
+		# 360p video for old iphones
 		ffmpeg -i "$video" -vcodec libx264 -vprofile baseline -preset slow -b:v \
-			250k -maxrate 250k -bufsize 500k -vf scale=-1:360 -threads 0 -acodec copy out.mp4
-		end=$(date +%s.%N)
-		diff=$(echo "scale=6; $end - $start" | bc)
-		simpdiff=$(echo "scale=2; $end - $start" | bc)
-		runsleft=$(echo "scale=2; $limit-$x"| bc)
-		secleft=$(echo "scale=2; $runsleft*$diff"|bc)
-		minleft=$(echo "scale=2; $runsleft*$diff/60"|bc)
-		eta=$(date -d "($date) $secleft sec" +%r)
-		echo "Run $x/$limit took $simpdiff seconds. ETA: $eta or about $minleft min from now."
-		echo "$x,$RUNDATE,$HOSTNAME,$PHYSICALCORES,$NAME,$diff,$BENCH" >> "$test_path"/results.txt
+			250k -maxrate 250k -bufsize 500k -vf scale=-1:360 -threads 0 -acodec copy out.mp4 &>/dev/null
+		finish=$(date +%s.%N)
+		calc
 		rm -f out.mp4
 	done
-	# cleanup
 	rm -f "$ramdisk/$video"
 }
 
 do_compress() {
-	BENCH=compress	
+	BENCH=compress
 	echo "Running compress..."
 	[[ ! -f "$ramdisk/$source.tar" ]] && cp "$test_path/$source.tar" "$ramdisk"
 	cd "$ramdisk" || exit
 	x=0
 	while [[ "$x" -lt "$limit" ]]; do
-		x=$(( $x + 1 ))
+		x=$(( x + 1 ))
 		RUNDATE=$(date "+%F %T")
 		start=$(date +%s.%N)
 		lrzip $source.tar
@@ -93,10 +90,9 @@ do_compress() {
 		minleft=$(echo "scale=2; $runsleft*$diff/60"|bc)
 		eta=$(date -d "($date) $secleft sec" +%r)
 		echo "Run $x/$limit took $simpdiff seconds. ETA: $eta or about $minleft min from now."
-		echo "$x,$RUNDATE,$HOSTNAME,$PHYSICALCORES,$NAME,$diff,$BENCH" >> $test_path/results.txt
-		rm -f "$ramdisk/$source.tar.lrz"
+		echo "$x,$RUNDATE,$HOSTNAME,$PHYSICALCORES,$(uname -r),$diff,$BENCH" >> $test_path/results.txt
+		rm -f $ramdisk/$source.tar.lrz
 	done
-	# cleanup
 	rm -f "$ramdisk/$source.tar"
 }
 
@@ -108,13 +104,13 @@ XSRUNNING=$(pidof xscreensaver)
 [[ -z $(which gcc) ]] && echo "Install base-devel group to allow for make benchmark." && exit 0
 [[ ! -d "$ramdisk" ]] && mkdir -p "$ramdisk"
 [[ ! -f "$test_path"/results.txt ]] &&
-	echo "run #,run date,hostname,physical cores/threads,kernel,time(sec),benchmark" \
+	echo "run #,run date,hostname,makeflags,kernel,time(sec),benchmark" \
 	> "$test_path/results.txt"
 
 case "$1" in
 	compress)	do_compress ;;
-	video)		do_video ;;
 	make)			do_make ;;
-	all)			do_compress ; do_make ;;
+	video)		do_video ;;
+	all)			do_compress ; do_make ; do_video ;;
 	*)				echo "Usage: $0 {pics|video|make|compress|all}" ; exit 0 ;;
 esac
