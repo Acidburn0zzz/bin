@@ -19,7 +19,7 @@ video="video.mkv"
 limit="10"
 
 # number of make flags which should be physical core + hyperthreaded core + 1
-MAKEFLAGS="17"
+MAKEFLAGS="9"
 
 calc() {
 	diff=$(echo "scale=6; $finish - $start" | bc)
@@ -29,7 +29,7 @@ calc() {
 	minleft=$(echo "scale=2; $runsleft*$diff/60"|bc)
 	eta=$(date -d "($date) $secleft sec" +%r)
 	echo "Run $x/$limit took $simpdiff seconds. ETA: $eta or about $minleft min from now."
-	echo "$x,$RUNDATE,$HOSTNAME,$MAKEFLAGS,$(uname -r),$diff,$BENCH" >> $test_path/results.txt
+	echo "$x,$RUNDATE,$HOSTNAME,$MAKEFLAGS,$(uname -r),$diff,$BENCH" >> $test_path/results.csv
 }
 
 do_make() {
@@ -81,7 +81,7 @@ do_compress() {
 		x=$(( x + 1 ))
 		RUNDATE=$(date "+%F %T")
 		start=$(date +%s.%N)
-		lrzip $source.tar
+		lrzip $source.tar &>/dev/null
 		end=$(date +%s.%N)
 		diff=$(echo "scale=6; $end - $start" | bc)
 		simpdiff=$(echo "scale=2; $end - $start" | bc)
@@ -90,7 +90,7 @@ do_compress() {
 		minleft=$(echo "scale=2; $runsleft*$diff/60"|bc)
 		eta=$(date -d "($date) $secleft sec" +%r)
 		echo "Run $x/$limit took $simpdiff seconds. ETA: $eta or about $minleft min from now."
-		echo "$x,$RUNDATE,$HOSTNAME,$PHYSICALCORES,$(uname -r),$diff,$BENCH" >> $test_path/results.txt
+		echo "$x,$RUNDATE,$HOSTNAME,$PHYSICALCORES,$(uname -r),$diff,$BENCH" >> $test_path/results.csv
 		rm -f $ramdisk/$source.tar.lrz
 	done
 	rm -f "$ramdisk/$source.tar"
@@ -103,14 +103,14 @@ XSRUNNING=$(pidof xscreensaver)
 [[ -z $(which lrzip) ]] && echo "Install lrzip to allow for compression benchmark." && exit 0
 [[ -z $(which gcc) ]] && echo "Install base-devel group to allow for make benchmark." && exit 0
 [[ ! -d "$ramdisk" ]] && mkdir -p "$ramdisk"
-[[ ! -f "$test_path"/results.txt ]] &&
+[[ ! -f "$test_path"/results.csv ]] &&
 	echo "run #,run date,hostname,makeflags,kernel,time(sec),benchmark" \
-	> "$test_path/results.txt"
+	> "$test_path/results.csv"
 
 case "$1" in
 	compress)	do_compress ;;
 	make)			do_make ;;
 	video)		do_video ;;
 	all)			do_compress ; do_make ; do_video ;;
-	*)				echo "Usage: $0 {pics|video|make|compress|all}" ; exit 0 ;;
+	*)				echo "Usage: $0 {video|make|compress|all}" ; exit 0 ;;
 esac
