@@ -11,25 +11,52 @@ ramdisk="/scratch/bench"
 source="linux-4.8"
 
 # name of video for test encode
-# https://www.youtube.com/watch?v=o3oDpCb7VqI
-# can be downloaded with youtube-dl
-video="video.mkv"
+# can be downloaded with youtube-dl, here we get just the 720p video
+# youtube-dl -f 136 https://www.youtube.com/watch?v=vELfuiUpKM0
+video="video.mp4"
 
 # number of times to run echo benchmark
-limit="10"
+limit="6"
 
 # number of make flags which should be physical core + hyperthreaded core + 1
 MAKEFLAGS="9"
 
 calc() {
 	diff=$(echo "scale=6; $finish - $start" | bc)
+	[[ "$BENCH" != "test" ]] && {
 	simpdiff=$(echo "scale=2; $finish - $start" | bc)
 	runsleft=$(echo "scale=2; $limit-$x"| bc)
 	secleft=$(echo "scale=2; $runsleft*$diff"|bc)
 	minleft=$(echo "scale=2; $runsleft*$diff/60"|bc)
 	eta=$(date -d "($date) $secleft sec" +%r)
-	echo "Run $x/$limit took $simpdiff seconds. ETA: $eta or about $minleft min from now."
 	echo "$x,$RUNDATE,$HOSTNAME,$MAKEFLAGS,$(uname -r),$diff,$BENCH" >> $test_path/results.csv
+}
+
+# store result in an array to do some statistics on the shell
+[[ $(( x - 1 )) -eq 0 ]] && unset Arr
+Arr["$(( x - 1 ))"]="$diff"
+mean=$(echo ${Arr[@]} | awk '{s+=$1}END{print s/NR}' RS=" ")
+sd=$(echo ${Arr[@]}|sed 's/ /\n/g' | awk '{x[NR]=$0; s+=$0; n++} END{a=s/n; for (i in x){ss += (x[i]-a)^2} sd = sqrt(ss/n); print sd}')
+
+if [[ ${#Arr[@]} -eq 1 ]]; then
+	echo "$x/$limit: $simpdiff sec ETA: $eta or about $minleft min."
+else
+	echo "$x/$limit: $simpdiff sec ETA: $eta or about $minleft min... mean result: $mean +/- $sd sec"
+fi
+}
+
+do_test() {
+	BENCH=test
+	echo "Running Test..."
+	x=0
+	while [[ "$x" -lt "$limit" ]]; do
+		x=$(( x + 1 ))
+		RUNDATE=$(date "+%F %T")
+		start=$(date +%s.%N)
+		sleep 1s
+		finish=$(date +%s.%N)
+		calc
+	done
 }
 
 do_make() {
@@ -82,15 +109,8 @@ do_compress() {
 		RUNDATE=$(date "+%F %T")
 		start=$(date +%s.%N)
 		lrzip $source.tar &>/dev/null
-		end=$(date +%s.%N)
-		diff=$(echo "scale=6; $end - $start" | bc)
-		simpdiff=$(echo "scale=2; $end - $start" | bc)
-		runsleft=$(echo "scale=2; $limit-$x"| bc)
-		secleft=$(echo "scale=2; $runsleft*$diff"|bc)
-		minleft=$(echo "scale=2; $runsleft*$diff/60"|bc)
-		eta=$(date -d "($date) $secleft sec" +%r)
-		echo "Run $x/$limit took $simpdiff seconds. ETA: $eta or about $minleft min from now."
-		echo "$x,$RUNDATE,$HOSTNAME,$PHYSICALCORES,$(uname -r),$diff,$BENCH" >> $test_path/results.csv
+		finish=$(date +%s.%N)
+		calc
 		rm -f $ramdisk/$source.tar.lrz
 	done
 	rm -f "$ramdisk/$source.tar"
@@ -111,6 +131,7 @@ case "$1" in
 	compress)	do_compress ;;
 	make)			do_make ;;
 	video)		do_video ;;
+	test)			do_test ;;
 	all)			do_compress ; do_make ; do_video ;;
-	*)				echo "Usage: $0 {video|make|compress|all}" ; exit 0 ;;
+	*)				echo "Usage: $0 {video|make|compress|test|all}" ; exit 0 ;;
 esac
