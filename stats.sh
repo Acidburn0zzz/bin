@@ -10,11 +10,11 @@ writeout() {
 
 	echo
 	echo "All values in MHz except count which is just the number of measurements..."
-	echo "median : $median"
-	echo "mean   : $mean"
 	echo "max    : $max"
+	echo "median : $median"
 	echo "min    : $min"
 	echo "count  : $(wc -l $file|awk '{print $1}')"
+	echo "mean   : $mean"
 
 	echo
 	here=$(pwd)
@@ -38,7 +38,11 @@ EOF
 echo "Wrote $here/$script which you can run to have gnuplot"
 echo "make a histogram with these data."
 chmod +x "$here/$script"
+exit 0
 }
+
+# allow ctrl+c to stop and retain data
+trap writeout SIGHUP SIGINT SIGTERM
 
 # check deps
 command -v awk >/dev/null 2>&1 || {
@@ -48,11 +52,10 @@ command -v bc >/dev/null 2>&1 || {
 echo " I require bc but it's not installed. Aborting!" >&2; exit 1; }
 
 if [[ -z "$1" ]]; then
-	echo "Usage: $0 arg1"
-	echo
-	echo "   arg1 can be an integer representing the number of seconds to watch"
-	echo "   the CPU frequency (recommend 120 or more) or it can be a path to"
-	echo "   a lot file already generated."
+	echo "Usage: $0 [token]"
+	echo "Token can be either:"
+	echo "   1) An integer representing the number of seconds to watch the CPU frequency"
+	echo "   2) The path to log file from a previous run."
 	exit 1
 elif [[ -f "$1" ]]; then
 	# just process an existing file
@@ -79,4 +82,5 @@ else
 		sleep 1
 		bc <<< "scale=1; $(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq)/1000" >> "$file"
 	done
+	writeout
 fi
