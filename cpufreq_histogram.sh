@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# script to log the CPU frequency over a period of time and 
+# plot a nice historgram of the frequency distribution
+
 writeout() {
 	cat "$file" | histogram.py -p
 	exit 0
