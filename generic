@@ -3,107 +3,107 @@
 # and manage a local repo
 #
 # user must have 32-bit chroot setup and configured or else the i686 build will fail
-[[ ! -f $HOME/bin/pretty ]] && echo "missing $HOME/bin/pretty" && exit 1
-. $HOME/bin/pretty
+[[ ! -f "$HOME"/bin/pretty ]] && echo "missing $HOME/bin/pretty" && exit 1
+. "$HOME"/bin/pretty
 
 temprepo="/scratch/router"
 
-[[ ! -f $HOME/bin/repo/makepkg.x86_64 ]] && echo "Missing template makepkg.conf for x86_64" && exit 1
-sed -e '/graysky/d' -e '/GPGKEY/d' ~/bin/repo/makepkg.x86_64 > $XDG_RUNTIME_DIR/makepkg.x86_64
+[[ ! -f "$HOME"/bin/repo/makepkg.x86_64 ]] && echo "Missing template makepkg.conf for x86_64" && exit 1
+sed -e '/graysky/d' -e '/GPGKEY/d' ~/bin/repo/makepkg.x86_64 > "$XDG_RUNTIME_DIR"/makepkg.x86_64
 
 deploy() {
-	rm -f $temprepo/$arch/$pkgname*.pkg.tar.xz 				# delete old pkg versions from repo
-	mv $start/$pkgname*.pkg.tar.xz $temprepo/$arch		# move in the new version to the repo
+  for pkg in "${pkgname[@]}"; do
+    # delete old pkg versions from repo
+    rm -f "$temprepo/x86_64/$pkg*.pkg.tar.xz"
 
-	stat_busy "Reindexing $arch repo" 
-	repo-add $temprepo/$arch/router.db.tar.xz $temprepo/$arch/*.pkg.tar.xz &>/dev/null
-	repo-add -f $temprepo/$arch/router.files.tar.xz $temprepo/$arch/*.pkg.tar.xz &>/dev/null
-	stat_done
+    # move in the new version to the repo
+    mv "$pkg"*.pkg.tar.xz "$temprepo/x86_64"
+  done
+  stat_busy "Reindexing repo"
+  if ! repo-add "$temprepo"/x86_64/router.db.tar.xz "$temprepo"/x86_64/*.pkg.tar.xz &>/dev/null; then
+    stat_die
+  else
+    true
+    stat_done
+  fi
 
-	stat_busy "Rsyncing $arch back to router" 
-	rsync -avxu --delete-after --password-file ~/bin/makepkg/.generic \
-		$temprepo/$arch/ serenity::repo/$arch/ &>/dev/null
-	stat_done
+  stat_busy "Rsyncing $arch back to router"
+  if ! rsync -avxu --delete-after --password-file ~/bin/makepkg/.generic "$temprepo/x86_64"/ serenity::repo/"x86_64"/ &>/dev/null; then
+    stat_die
+  else
+    true
+    stat_done
+  fi
 }
 
 build64() {
-	makepkg -srcf --config $XDG_RUNTIME_DIR/makepkg.x86_64
+  makepkg -srcf --config "$XDG_RUNTIME_DIR"/makepkg.x86_64
 }
 
 chrootbuild64() {
-	sudo ccm S
+  sudo ccm64 S
 }
 
 # here is the script
 start=$(pwd)
-[[ ! -d $temprepo ]] && mkdir -p $temprepo
+[[ ! -d "$temprepo" ]] && mkdir -p "$temprepo"
+
 stat_busy "Grabbing files from router"
-rsync -avx --password-file ~/bin/makepkg/.generic serenity::repo/ $temprepo/ &>/dev/null 
-if [[ $? -gt 0 ]]; then
-	msg "rsync is not responding so quitting."
-	stat_die
+if ! rsync -avx --password-file ~/bin/makepkg/.generic serenity::repo/ "$temprepo"/ &>/dev/null; then
+  msg "rsync is not responding so quitting."
+  stat_die
 else
-	stat_done
+  true
+  stat_done
 fi
 
 # build all x86_64 only
 
 if [[ -f PKGBUILD ]]; then
-	. PKGBUILD
-	for i in "$arch"; do
-		[[ $(pwd) != "$start" ]] && cd $start
-		case "$i" in
-			any)
-				# build in native 64-bit env since it is an any package and does not matter
-				msg "Building the any package..."
-				#build64
-				chrootbuild64
-				# make sure to process both x86_64 and i686 repos for an any package
-				for x in x86_64 i686; do
-					rm -f $temprepo/x86_64/$pkgname*.pkg.tar.xz # cleanup old pkg versions from repo
-					cp $pkgname*.pkg.tar.xz $temprepo/x86_64	# copy in the new version
+  . PKGBUILD
+  for i in $arch; do
+    [[ $(pwd) != "$start" ]] &&  { cd "$start" || exit 1 ;}
+    case "$i" in
+      any)
+        # build in native 64-bit env since it is an any package and does not matter
+        msg "Building the any package..."
+        chrootbuild64
+        deploy
 
-					stat_busy "Reindexing x86_64 repo" 
-					repo-add $temprepo/x86_64/router.db.tar.xz $temprepo/x86_64/*.pkg.tar.xz &>/dev/null
-					repo-add -f $temprepo/x86_64/router.files.tar.xz $temprepo/x86_64/*.pkg.tar.xz &>/dev/null
-					stat_done
+        rm -rf "$temprepo"
+        exit 0
+        ;;
+      *)
+        arch="x86_64"
+        msg "Building the $arch package..."
+        chrootbuild64
+        deploy
+    esac
+  done
+else
+  echo "Remove unwanted packages from $temprepo/$arch"
+  read -r -p "Then hit any key to reindex and resync back." response
+  case "$response" in
+    *)
+      stat_busy "Reindexing x86_64 repo"
+      if ! repo-add "$temprepo"/x86_64/router.db.tar.xz "$temprepo"/x86_64/*.pkg.tar.xz &>/dev/null; then
+        stat_die
+      else
+        true
+        stat_done
+      fi
 
-					stat_busy "Rsyncing x86_64 back to router"
-					rsync -axu --delete-after --password-file ~/bin/makepkg/.generic $temprepo/x86_64/ serenity::repo/x86_64/ &>/dev/null
-					stat_done
-				done
-				rm -f $pkgname*.pkg.tar.xz # remove the package
-				rm -rf "temprepo"
-				exit 0
-				;;
-			*)
-				arch="x86_64" && msg "Building the $arch package..."
-				#build64
-				chrootbuild64
-				deploy # deploy function has its own stat_busy messages
+      stat_busy "Rsyncing x86_64 back to router"
+      if ! rsync -axu --delete-after --password-file ~/bin/makepkg/.generic "$temprepo"/x86_64/ serenity::repo/x86_64/ $>/dev/null; then
+        stat_die
+      else
+        true
+        stat_done
+      fi
+      rm -rf "$temprepo"
+      exit 0
+      ;;
+  esac
+fi
 
-				#arch="i686" && msg "Building the $arch package..."
-				#chrootbuild32
-				#deploy # deploy function has its own stat_busy message
-				#rm -rf "temprepo"
-				arch="i686" || return
-			esac
-		done
-	else
-		echo "Remove unwanted packages from $temprepo/$arch"
-		read -r -p "Then hit any key to reindex and resync back." response
-		case "$response" in
-			*)
-					stat_busy "Reindexing x86_64 repo"
-					repo-add $temprepo/x86_64/router.db.tar.xz $temprepo/x86_64/*.pkg.tar.xz &>/dev/null
-					repo-add -f $temprepo/x86_64/router.files.tar.xz $temprepo/x86_64/*.pkg.tar.xz &>/dev/null
-					stat_done
-
-					stat_busy "Rsyncing x86_64 back to router"
-					rsync -axu --delete-after --password-file ~/bin/makepkg/.generic $temprepo/x86_64/ serenity::repo/x86_64/ $>/dev/null
-					stat_done
-					rm -rf "temprepo"
-				exit 0
-				;;
-		esac
-	fi
+# vim:set ts=2 sw=2 et:
