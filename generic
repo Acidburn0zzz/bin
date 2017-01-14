@@ -14,11 +14,12 @@ sed -e '/graysky/d' -e '/GPGKEY/d' ~/bin/repo/makepkg.x86_64 > "$XDG_RUNTIME_DIR
 deploy() {
   for pkg in "${pkgname[@]}"; do
     # delete old pkg versions from repo
-    rm -f "$temprepo/x86_64/$pkg*.pkg.tar.xz"
+    rm -f $temprepo/x86_64/"$pkg"*.pkg.tar.xz
 
     # move in the new version to the repo
     mv "$pkg"*.pkg.tar.xz "$temprepo/x86_64"
   done
+  
   stat_busy "Reindexing repo"
   if ! repo-add "$temprepo"/x86_64/router.db.tar.xz "$temprepo"/x86_64/*.pkg.tar.xz &>/dev/null; then
     stat_die
