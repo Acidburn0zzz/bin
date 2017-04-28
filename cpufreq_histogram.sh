@@ -4,7 +4,7 @@
 # plot a nice historgram of the frequency distribution
 
 writeout() {
-	cat "$file" | histogram.py -p
+	histogram.py -p < "$file"
 	exit 0
 }
 
@@ -49,7 +49,7 @@ elif [[ -f "$1" ]]; then
 else
 	# make sure we can collect data
 	[[ -f /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq ]] || {
-	echo " Cannot tell what the CPU current CPU frequency is. Aborting!" >&2; exit1; }
+	echo " Cannot tell what the CPU current CPU frequency is. Aborting!" >&2; exit 1; }
 	
 	# make sure $1 is an integer
 	[[ "$1" =~ ^-?[0-9]+$ ]] || {
