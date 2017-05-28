@@ -19,9 +19,9 @@ deploy() {
     # move in the new version to the repo
     mv "$pkg"*.pkg.tar.xz "$temprepo/x86_64"
   done
-  
+
   stat_busy "Reindexing repo"
-#  if ! repo-add "$temprepo"/x86_64/router.db.tar.xz "$temprepo"/x86_64/*.pkg.tar.xz &>/dev/null; then
+  #  if ! repo-add "$temprepo"/x86_64/router.db.tar.xz "$temprepo"/x86_64/*.pkg.tar.xz &>/dev/null; then
   if ! repo-add "$temprepo"/x86_64/router.db.tar.xz "$temprepo"/x86_64/*.pkg.tar.xz; then
     stat_die
   else
@@ -83,11 +83,12 @@ if [[ -f PKGBUILD ]]; then
     esac
   done
 else
-  echo "Remove unwanted packages from $temprepo/$arch"
+  echo "Add or remove packages from $temprepo/$arch"
   read -r -p "Then hit any key to reindex and resync back." response
   case "$response" in
     *)
       stat_busy "Reindexing x86_64 repo"
+      rm -f "$temprepo"/x86_64/router*
       if ! repo-add "$temprepo"/x86_64/router.db.tar.xz "$temprepo"/x86_64/*.pkg.tar.xz &>/dev/null; then
         stat_die
       else
@@ -96,7 +97,8 @@ else
       fi
 
       stat_busy "Rsyncing x86_64 back to router"
-      if ! rsync -rlxDu --delete-after --password-file ~/bin/makepkg/.generic "$temprepo"/x86_64/ nightshade::repo/x86_64/ $>/dev/null; then
+      if ! rsync -rlxDu --delete-after --password-file ~/bin/makepkg/.generic "$temprepo/x86_64"/ nightshade::repo/"x86_64"/ &>/dev/null; then
+        #old    if ! rsync -rlxDu --delete-after --password-file ~/bin/makepkg/.generic "$temprepo"/x86_64/ nightshade::repo/x86_64/ $>/dev/null; then
         stat_die
       else
         true
