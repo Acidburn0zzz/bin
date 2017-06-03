@@ -98,7 +98,6 @@ else
 
       stat_busy "Rsyncing x86_64 back to router"
       if ! rsync -rlxDu --delete-after --password-file ~/bin/makepkg/.generic "$temprepo/x86_64"/ nightshade::repo/"x86_64"/ &>/dev/null; then
-        #old    if ! rsync -rlxDu --delete-after --password-file ~/bin/makepkg/.generic "$temprepo"/x86_64/ nightshade::repo/x86_64/ $>/dev/null; then
         stat_die
       else
         true
